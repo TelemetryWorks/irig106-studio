@@ -47,207 +47,116 @@ This is the preferred starting point because it minimizes moving parts while pre
 
 ---
 
-## Step-by-Step Plan
+## Execution Phases
 
-## Step 1: Freeze the architectural boundaries
-
-Goal:
-Define the code boundaries before implementation starts.
-
-Deliverables:
-
-- confirm the project structure
-- confirm UI, service, and domain responsibilities
-- confirm that Rust/Wasm is treated as the engine rather than the whole app
-- confirm that browser APIs own file access and permission boundaries
-
-Educational focus:
-
-- why plain JS still needs architecture
-- why the UI should not call low-level Wasm exports everywhere
-- why service boundaries matter for future migration
-
-Exit criteria:
-
-- the team can explain what belongs in UI code, service code, worker code, and Rust code
-- the team agrees that deployment location must not leak into the UI
+The implementation should be delivered in five short phases. Each phase should end in a working state and should prove one major architectural boundary before the next phase begins.
 
 ---
 
-## Step 2: Build the minimal browser shell
+## Phase 1: Establish the browser application shell
 
 Goal:
-Create a working browser application shell with no real IRIG processing yet.
+Create a structured browser UI with explicit boundaries before introducing real IRIG processing.
 
-Deliverables:
+Includes:
 
-- static HTML entry page
-- CSS tokens, layout, and base visual structure
-- initial app bootstrap in plain JavaScript modules
-- placeholder regions for source explorer, workspace, inspector, and status area
+- confirm UI, service, worker, and Rust responsibilities
+- build the static HTML shell and CSS layout
+- add JavaScript bootstrap code
+- introduce explicit state, actions, subscriptions, and targeted rendering
 
 Educational focus:
 
-- how the application layout maps to operational workflows
-- how to organize plain JS modules without a framework
-- how to keep rendering logic small and inspectable
+- plain JavaScript still needs architecture
+- state must be the source of truth
+- deployment details must not leak into the UI
 
 Exit criteria:
 
-- the application loads with the planned panel structure
-- the codebase demonstrates the intended app/module organization
+- the app loads with the intended workbench layout
+- at least one user interaction flows through action -> state -> render
+- the team can explain what belongs in UI code versus service code versus Rust code
 
 ---
 
-## Step 3: Introduce explicit state and rendering flow
+## Phase 2: Define the service boundary and browser file flow
 
 Goal:
-Make state the source of truth before adding real data handling.
+Create the application-facing service layer and prove the browser file acquisition model.
 
-Deliverables:
+Includes:
 
-- a small authoritative state store
-- action functions for meaningful state changes
-- a notification/subscription mechanism
-- render functions driven from state rather than ad hoc DOM mutation
+- define service operations such as `loadFile`, `runAnalysis`, `decodeChannel`, and `exportSelection`
+- define DTO-style request and response shapes
+- implement file input and/or drag-and-drop
+- surface selected-file metadata in the UI
+- handle unsupported, canceled, and invalid file flows clearly
 
 Educational focus:
 
-- state -> render -> interaction -> action -> state loop
-- why no-framework UI still needs disciplined state transitions
-- how to separate transient UI state from domain state
-
-Exit criteria:
-
-- a basic interaction updates state and re-renders only the intended region
-- the team can trace user interaction through actions and state updates
-
----
-
-## Step 4: Define the service boundary
-
-Goal:
-Create the JavaScript service interface that the UI will call regardless of execution model.
-
-Deliverables:
-
-- a service module with operations such as:
-  - `loadFile`
-  - `runAnalysis`
-  - `decodeChannel`
-  - `exportSelection`
-- request/response DTO shapes
-- structured error objects suitable for UI display
-
-Educational focus:
-
-- why the UI should depend on service operations instead of Wasm details
-- how a stable interface protects later migration to worker, desktop, or server
-
-Exit criteria:
-
-- UI code talks only to the service boundary for domain operations
-- low-level implementation details are hidden behind adapters
-
----
-
-## Step 5: Prove browser file acquisition
-
-Goal:
-Implement file selection using browser-approved mechanisms and keep that model explicit.
-
-Deliverables:
-
-- file input and/or drag-and-drop support
-- creation of a `File`, `Blob`, or browser file handle based flow
-- file metadata display in the UI
-- clear error handling for unsupported or canceled operations
-
-Educational focus:
-
-- browser file access starts with user-granted browser APIs
-- Rust/Wasm does not directly open local file paths in the browser
-- the browser security boundary controls file access
+- browser APIs own local file access permissions
+- Rust/Wasm is the parsing and compute engine, not the file permission layer
+- the UI should call service operations, not scattered low-level Wasm functions
 
 Key rule:
 
-- think in terms of "browser grants access -> JS/worker obtains bytes or handle -> Wasm interprets bytes"
+- think in terms of "browser grants access -> JS or worker obtains bytes or handle -> Wasm interprets bytes"
 
 Exit criteria:
 
-- the app can accept a local file through browser-supported mechanisms
-- the team understands that file permission and file parsing are separate concerns
+- the UI acquires a local file through browser-approved mechanisms
+- all domain-facing UI interactions go through the service boundary
 
 ---
 
-## Step 6: Add a stub worker and message protocol
+## Phase 3: Introduce the worker and connect the first Wasm engine path
 
 Goal:
-Introduce the worker boundary before introducing real heavy logic.
+Move heavy execution out of the UI thread and connect one worker to one shared Wasm build.
 
-Deliverables:
+Includes:
 
-- one worker entry point, preferably `engine-worker.js` or `analysis-worker.js`
-- a worker client module in the UI/service layer
-- message types for request, progress, success, and failure
-- a working round-trip from UI -> worker -> UI with stubbed data
+- add one worker entry point, preferably `engine-worker.js` or `analysis-worker.js`
+- add a worker client module and request/progress/result/error message protocol
+- create one Rust core and one Wasm-facing adapter path
+- add one JS Wasm loader such as `wasm-engine.js`
+- initialize Wasm inside the worker and run one simple domain operation
 
 Educational focus:
 
 - workers are separate execution contexts
 - workers do not manipulate the DOM
-- workers communicate only by messages
-- separating the worker entry point makes the runtime boundary obvious
+- one Wasm module artifact can back multiple worker instances
+- one worker and one Wasm module is the correct default starting point
 
 Exit criteria:
 
-- the UI can send a job to the worker and receive a result back
-- the team understands why worker code is not just another UI feature module
-
----
-
-## Step 7: Integrate the first Wasm engine path
-
-Goal:
-Connect the service layer and worker to one shared Wasm build.
-
-Deliverables:
-
-- one Rust core crate for domain logic
-- one Wasm-facing crate or adapter layer
-- one JS Wasm loader such as `wasm-engine.js`
-- one worker path that initializes the Wasm engine and runs a simple domain operation
-
-Educational focus:
-
-- one Wasm module artifact does not mean one global singleton runtime
-- each worker usually creates its own Wasm instance from the same Wasm build output
-- one Wasm module is the correct default until size or isolation pressures justify splitting
-
-Exit criteria:
-
-- the worker can initialize Wasm and execute a simple operation successfully
+- the UI can send work to the worker and receive a result back
+- the worker can initialize the Wasm engine successfully
 - the UI remains unaware of low-level Wasm initialization details
 
 ---
 
-## Step 8: Move file reading and parsing into the worker
+## Phase 4: Process real files in the worker and add performance discipline
 
 Goal:
-Keep the UI responsive by performing heavy reads and parsing away from the main thread.
+Read and process actual binary inputs in the worker while keeping the UI responsive.
 
-Deliverables:
+Includes:
 
-- main thread acquires the browser file object
-- the file object or file-derived work request is sent to the worker
-- the worker performs reads and invokes Wasm parsing
-- the worker posts progress, metadata, and result summaries back to the UI
+- main thread receives the browser file object
+- file object or file-derived work request is sent to the worker
+- worker performs reads and invokes Wasm parsing
+- worker posts progress, metadata, and result summaries back to the UI
+- add chunked processing where appropriate
+- use transferable `ArrayBuffer` paths when large buffers must cross contexts
 
 Educational focus:
 
-- why one worker is the preferred first design
-- why file reading in the worker avoids unnecessary UI thread work
-- why it is better to centralize file ownership and parsing flow early
+- one worker is usually the best first architecture
+- file reading should happen in the worker when practical
+- zero-copy is a boundary-specific optimization, not an end-to-end assumption
+- shared memory is an advanced option, not the default
 
 Default processing model:
 
@@ -260,212 +169,46 @@ Default processing model:
 Exit criteria:
 
 - a real file can be selected and processed without freezing the UI
-- progress and completion are visible in the interface
+- the team has a credible chunking and copy-avoidance strategy for larger files
 
 ---
 
-## Step 9: Add chunking and practical copy-avoidance rules
+## Phase 5: Deliver the first usable analysis slice and preserve migration flexibility
 
 Goal:
-Support larger binary files without designing around unrealistic zero-copy assumptions.
+Ship one real end-to-end workflow and confirm the architecture still supports later scaling.
 
-Deliverables:
+Includes:
 
-- chunked or streaming-oriented file processing design
-- transferable `ArrayBuffer` usage when bytes must move across contexts
-- documented rules for when to read in the main thread vs the worker
-- measurements or observations for large-file behavior
+- load a file into the workspace
+- display metadata or structure summaries
+- deliver one real analysis or decode workflow
+- add visible job status, progress, completion, and failure states
+- add cancellation hooks where feasible
+- review whether one worker remains sufficient
+- review whether the service boundary still cleanly supports desktop or server migration
 
 Educational focus:
 
-- zero-copy is a boundary-specific optimization, not an end-to-end guarantee
-- reading a `File` into memory still materializes bytes in memory
-- transferable buffers avoid extra copies between contexts
-- shared memory should be treated as an advanced option, not the default
-
-Performance rules:
-
-- prefer reading large files in the worker when practical
-- avoid unnecessary copying of large buffers
-- use transferred buffers when large binary data must cross contexts
-- prefer chunked processing for large files
-- treat `SharedArrayBuffer` as an advanced later optimization with deployment constraints
-
-Exit criteria:
-
-- the app can process larger files with a credible plan for responsiveness and memory behavior
-- the team understands the difference between practical copy reduction and perfect zero-copy claims
-
----
-
-## Step 10: Build the first useful analysis workflow
-
-Goal:
-Turn the architecture into a user-visible vertical slice.
-
-Deliverables:
-
-- file loaded into the workspace
-- visible metadata or structure summary
-- one real analysis or decode workflow
-- clear success, failure, busy, and idle states
-
-Educational focus:
-
-- how UI, state, worker orchestration, and Wasm combine into one feature
-- how to keep long-running jobs understandable to the user
-
-Exit criteria:
-
-- a user can complete one meaningful end-to-end workflow
-- the implementation proves the planned architecture is viable
-
----
-
-## Step 11: Add job status, progress, and cancellation patterns
-
-Goal:
-Make long-running operations trustworthy and operationally clear.
-
-Deliverables:
-
-- job status display
-- measurable progress where possible
-- intentional busy indicators
-- cancellation hooks where feasible
-- structured error reporting tied to specific operations
-
-Educational focus:
-
-- long-running work must not feel opaque
-- the UI should show operation state without freezing interaction
-- status communication is part of the architecture, not decoration
-
-Exit criteria:
-
-- users can see what is running, what completed, and what failed
-- long operations do not collapse into an indefinite busy state
-
----
-
-## Step 12: Reassess worker topology only after real pressure appears
-
-Goal:
-Delay complexity until evidence exists.
-
-Deliverables:
-
-- explicit decision on whether to keep one worker or split into multiple workers
-- reasons based on profiling, module size, isolation, or operational requirements
-- updated architecture notes if the topology changes
-
-Educational focus:
-
+- long-running work must remain operationally clear
 - multiple workers are not automatically better
-- multiple workers usually imply multiple Wasm instances, not multiple Wasm apps
-- one coordinator worker is often simpler than several specialized workers early on
+- migration readiness depends on stable boundaries, not on premature abstraction
 
 Decision rule:
 
-- start with one worker and one Wasm module
-- split only if concurrency, organization, or isolation needs justify it
+- keep one worker and one Wasm module unless real profiling or isolation needs justify a split
 
 Exit criteria:
 
-- the project keeps the simplest worker topology that meets real needs
-
----
-
-## Step 13: Prepare the migration path
-
-Goal:
-Confirm that the implementation still supports future desktop or server execution.
-
-Deliverables:
-
-- review of Rust core purity and portability
-- review of JS adapters and DTO boundaries
-- review of worker assumptions that would matter for server migration
-- list of browser-specific concerns that remain intentionally isolated
-
-Educational focus:
-
-- how to preserve migration flexibility without overbuilding the first version
-- how stable service interfaces reduce rewrite risk
-
-Exit criteria:
-
-- the team can explain how `runAnalysis()` could later move from browser Wasm to worker-hosted Wasm, desktop-native Rust, or a server API without a major UI rewrite
-
----
-
-## Recommended Milestone Grouping
-
-Use these milestones to keep progress visible.
-
-### Milestone A: UI Shell
-
-Covers:
-
-- Step 1
-- Step 2
-- Step 3
-
-Outcome:
-
-- a structured browser shell with explicit state and rendering flow
-
-### Milestone B: Service and File Flow
-
-Covers:
-
-- Step 4
-- Step 5
-- Step 6
-
-Outcome:
-
-- the UI can acquire files, talk to a worker, and rely on a stable service boundary
-
-### Milestone C: Wasm-Powered Processing
-
-Covers:
-
-- Step 7
-- Step 8
-- Step 9
-
-Outcome:
-
-- one worker and one Wasm engine can process real binary data while preserving responsiveness
-
-### Milestone D: First Real Tool Slice
-
-Covers:
-
-- Step 10
-- Step 11
-
-Outcome:
-
-- one end-to-end workflow is usable and operationally clear
-
-### Milestone E: Scale and Migration Readiness
-
-Covers:
-
-- Step 12
-- Step 13
-
-Outcome:
-
-- the project scales only where needed and retains future deployment flexibility
+- one meaningful workflow is usable end to end
+- users can see what is running, what completed, and what failed
+- the team can explain how the same service interface could later target worker-hosted Wasm, desktop-native Rust, or a server API
 
 ---
 
 ## Teaching Notes for Iterative Development
 
-When implementing each step, prefer this sequence:
+When implementing each phase, prefer this sequence:
 
 1. explain the architectural purpose of the step
 2. build the smallest working version
