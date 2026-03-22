@@ -491,6 +491,8 @@ The UI calls these service methods, not low-level Wasm functions scattered throu
   
 This boundary is important because Rust/Wasm is the application engine, not the entire frontend architecture.
 
+Wasm should be treated as the parsing and computation engine, while browser APIs remain responsible for user-mediated file access and permission boundaries.
+
 JavaScript continues to play a necessary role for:
 
 - DOM rendering
@@ -503,6 +505,54 @@ JavaScript continues to play a necessary role for:
 
 This keeps Rust focused on correctness-heavy domain logic while keeping browser-facing concerns in the browser layer.  
   
+## Browser File Access And Worker Model
+
+In the browser, local file access begins with browser-approved user actions such as:
+
+- file input
+- drag and drop
+- file picker APIs where supported
+
+The browser provides a `File`, `Blob`, or file handle to JavaScript or a worker after the user grants access.
+
+Rust/Wasm is responsible for parsing, decoding, validation, and computation on the provided data. Rust/Wasm should not be treated as the layer that directly acquires local file permissions.
+
+### File access rules
+
+- User-approved browser APIs must initiate access to local files.
+- The UI or a worker may receive `File`, `Blob`, or file handle objects.
+- Wasm should operate on bytes, chunks, or structured request objects passed through the application service boundary.
+- Do not design around native-style file path access in the browser.
+
+### Worker rules
+
+Workers are separate browser execution contexts.
+
+This means:
+
+- workers do not manipulate the DOM
+- workers communicate through messages
+- each worker usually initializes its own instance of the shared Wasm module
+- workers should not rely on shared in-memory Rust state unless explicitly designed for it
+
+### Default processing model
+
+The preferred browser processing model is:
+
+1. the user grants file access
+2. the main thread receives the browser file object
+3. a worker performs heavy reads and processing when needed
+4. the worker calls the Wasm engine
+5. the worker posts progress and results back to the UI
+
+### Performance rules
+
+- Avoid unnecessary copying of large buffers between contexts.
+- Prefer reading large files in the worker when practical.
+- Use transferable buffers when moving large binary data between the main thread and workers.
+- Treat zero-copy as an optimization goal for specific boundaries, not as an assumed end-to-end guarantee.
+- Prefer chunked or streaming processing for large files.
+
 ## Wasm design rules
 
 - Keep Rust core logic pure where possible.
@@ -535,6 +585,8 @@ The UI and service boundaries should be designed so these options remain open.
 ### Rule
 
 UI code must depend on an abstract application service boundary, not directly on deployment location.  
+
+Worker-based execution should assume separate Wasm instances per worker unless a more advanced shared-memory design is explicitly chosen.
   
 Example mental model:  
   
@@ -552,6 +604,7 @@ Long-running work must never make the app feel stuck.
 
 - avoid blocking the main thread
 - use workers for expensive client-side jobs when needed
+- large binary file reads should occur in a worker when practical
 - show progress for long operations
 - support cancellation where feasible
 - show busy state intentionally, not globally and indefinitely
@@ -931,4 +984,3 @@ A UI feature is complete when:
 - future portability to desktop and server deployments
   
 The application should prioritize correctness, maintainability, portability, and operational clarity over framework convenience.  
-
