@@ -89,6 +89,48 @@ cargo build
 cargo test
 ```
 
+## Verification Checklist
+
+Use this checklist before pushing substantial changes or handing work
+off to another developer.
+
+### 1. Rust workspace builds
+
+```bash
+cargo build --workspace
+```
+
+### 2. Core crate tests pass
+
+```bash
+cargo test --workspace
+```
+
+### 3. Desktop app opens real Ch10 files
+
+```bash
+cargo tauri dev
+```
+
+Then:
+- Click `File`
+- Select a `.ch10` file
+- Confirm the channel tree populates
+
+### 4. WASM module builds
+
+```bash
+npm run build:wasm
+```
+
+Then confirm `src/wasm/` contains the generated `.wasm` binary and JS glue.
+
+### 5. Full CI check
+
+```bash
+npm run ci
+```
+
 ## Project Architecture
 
 Read `docs/PROJECT_STRUCTURE.md` for the complete file map and data
