@@ -74,18 +74,18 @@ describe("formatIrigTime", () => {
 
 describe("dataTypeBadge", () => {
   it("returns 1553 badge for MIL-STD-1553 Format A", () => {
-    const badge = dataTypeBadge(DataType.Mil1553_FmtA);
+    const badge = dataTypeBadge(DataType.Mil1553FmtA);
     expect(badge.label).toBe("1553");
     expect(badge.css).toBe("badge--1553");
   });
 
   it("returns 1553 badge for MIL-STD-1553 Format B", () => {
-    const badge = dataTypeBadge(DataType.Mil1553_FmtB);
+    const badge = dataTypeBadge(DataType.Mil1553FmtB);
     expect(badge.label).toBe("1553");
   });
 
   it("returns PCM badge for PCM Format A", () => {
-    const badge = dataTypeBadge(DataType.Pcm_FmtA);
+    const badge = dataTypeBadge(DataType.PcmFmtA);
     expect(badge.label).toBe("PCM");
     expect(badge.css).toBe("badge--pcm");
   });
@@ -97,7 +97,7 @@ describe("dataTypeBadge", () => {
   });
 
   it("returns Video badge for Video Format A", () => {
-    const badge = dataTypeBadge(DataType.Video_FmtA);
+    const badge = dataTypeBadge(DataType.VideoFmtA);
     expect(badge.label).toBe("Video");
     expect(badge.css).toBe("badge--video");
   });
@@ -109,7 +109,7 @@ describe("dataTypeBadge", () => {
   });
 
   it("returns Ethernet badge for Ethernet Format A", () => {
-    const badge = dataTypeBadge(DataType.Ethernet_FmtA);
+    const badge = dataTypeBadge(DataType.EthernetFmtA);
     expect(badge.label).toBe("Ethernet");
     expect(badge.css).toBe("badge--ethernet");
   });
@@ -130,15 +130,15 @@ describe("DataType enum values", () => {
   it("matches IRIG 106 spec hex codes", () => {
     // Spot-check critical values from IRIG 106-17 Table 10-6
     expect(DataType.Computer0).toBe(0x00);
-    expect(DataType.Pcm_FmtA).toBe(0x09);
+    expect(DataType.PcmFmtA).toBe(0x09);
     expect(DataType.Time).toBe(0x11);
-    expect(DataType.Mil1553_FmtA).toBe(0x19);
+    expect(DataType.Mil1553FmtA).toBe(0x19);
     expect(DataType.Analog).toBe(0x21);
     expect(DataType.Discrete).toBe(0x29);
     expect(DataType.Arinc429).toBe(0x38);
-    expect(DataType.Video_FmtA).toBe(0x40);
+    expect(DataType.VideoFmtA).toBe(0x40);
     expect(DataType.Uart).toBe(0x50);
-    expect(DataType.Ethernet_FmtA).toBe(0x68);
+    expect(DataType.EthernetFmtA).toBe(0x68);
     expect(DataType.Tspi).toBe(0x70);
     expect(DataType.Can).toBe(0x78);
   });

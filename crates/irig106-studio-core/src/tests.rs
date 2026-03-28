@@ -359,23 +359,23 @@ mod data_type_tests {
     fn from_u8_known_values() {
         assert_eq!(DataType::from_u8(0x00), Some(DataType::Computer0));
         assert_eq!(DataType::from_u8(0x01), Some(DataType::Computer1));
-        assert_eq!(DataType::from_u8(0x09), Some(DataType::Pcm_FmtA));
-        assert_eq!(DataType::from_u8(0x0A), Some(DataType::Pcm_FmtB));
+        assert_eq!(DataType::from_u8(0x09), Some(DataType::PcmFmtA));
+        assert_eq!(DataType::from_u8(0x0A), Some(DataType::PcmFmtB));
         assert_eq!(DataType::from_u8(0x11), Some(DataType::Time));
-        assert_eq!(DataType::from_u8(0x19), Some(DataType::Mil1553_FmtA));
-        assert_eq!(DataType::from_u8(0x1A), Some(DataType::Mil1553_FmtB));
+        assert_eq!(DataType::from_u8(0x19), Some(DataType::Mil1553FmtA));
+        assert_eq!(DataType::from_u8(0x1A), Some(DataType::Mil1553FmtB));
         assert_eq!(DataType::from_u8(0x21), Some(DataType::Analog));
         assert_eq!(DataType::from_u8(0x29), Some(DataType::Discrete));
         assert_eq!(DataType::from_u8(0x30), Some(DataType::Message));
         assert_eq!(DataType::from_u8(0x38), Some(DataType::Arinc429));
-        assert_eq!(DataType::from_u8(0x40), Some(DataType::Video_FmtA));
-        assert_eq!(DataType::from_u8(0x41), Some(DataType::Video_FmtB));
-        assert_eq!(DataType::from_u8(0x48), Some(DataType::Image_FmtA));
+        assert_eq!(DataType::from_u8(0x40), Some(DataType::VideoFmtA));
+        assert_eq!(DataType::from_u8(0x41), Some(DataType::VideoFmtB));
+        assert_eq!(DataType::from_u8(0x48), Some(DataType::ImageFmtA));
         assert_eq!(DataType::from_u8(0x50), Some(DataType::Uart));
         assert_eq!(DataType::from_u8(0x58), Some(DataType::Ieee1394));
         assert_eq!(DataType::from_u8(0x60), Some(DataType::ParallelDC));
-        assert_eq!(DataType::from_u8(0x68), Some(DataType::Ethernet_FmtA));
-        assert_eq!(DataType::from_u8(0x69), Some(DataType::Ethernet_FmtB));
+        assert_eq!(DataType::from_u8(0x68), Some(DataType::EthernetFmtA));
+        assert_eq!(DataType::from_u8(0x69), Some(DataType::EthernetFmtB));
         assert_eq!(DataType::from_u8(0x70), Some(DataType::Tspi));
         assert_eq!(DataType::from_u8(0x78), Some(DataType::Can));
         assert_eq!(DataType::from_u8(0x79), Some(DataType::FibreCh));
@@ -396,8 +396,8 @@ mod data_type_tests {
     fn from_u8_boundary_around_known_values() {
         // One below and above 1553 FmtA (0x19)
         assert_eq!(DataType::from_u8(0x18), None);
-        assert_eq!(DataType::from_u8(0x19), Some(DataType::Mil1553_FmtA));
-        assert_eq!(DataType::from_u8(0x1A), Some(DataType::Mil1553_FmtB));
+        assert_eq!(DataType::from_u8(0x19), Some(DataType::Mil1553FmtA));
+        assert_eq!(DataType::from_u8(0x1A), Some(DataType::Mil1553FmtB));
         assert_eq!(DataType::from_u8(0x1B), None);
     }
 
@@ -406,11 +406,11 @@ mod data_type_tests {
         // Verify the enum discriminant matches the from_u8 mapping
         let variants = [
             (DataType::Computer0, 0x00u8),
-            (DataType::Mil1553_FmtA, 0x19),
+            (DataType::Mil1553FmtA, 0x19),
             (DataType::Time, 0x11),
-            (DataType::Pcm_FmtA, 0x09),
+            (DataType::PcmFmtA, 0x09),
             (DataType::Arinc429, 0x38),
-            (DataType::Ethernet_FmtA, 0x68),
+            (DataType::EthernetFmtA, 0x68),
         ];
 
         for (variant, expected_byte) in variants {

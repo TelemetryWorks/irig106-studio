@@ -13,40 +13,40 @@ export enum DataType {
   Computer0     = 0x00,
   Computer1     = 0x01,
   Time          = 0x11,
-  Mil1553_FmtA  = 0x19,
-  Mil1553_FmtB  = 0x1A,
+  Mil1553FmtA  = 0x19,
+  Mil1553FmtB  = 0x1A,
   Analog        = 0x21,
   Discrete      = 0x29,
   Message       = 0x30,
   Arinc429      = 0x38,
-  Video_FmtA    = 0x40,
-  Video_FmtB    = 0x41,
-  Image_FmtA    = 0x48,
+  VideoFmtA    = 0x40,
+  VideoFmtB    = 0x41,
+  ImageFmtA    = 0x48,
   Uart          = 0x50,
   Ieee1394      = 0x58,
   ParallelDC    = 0x60,
-  Ethernet_FmtA = 0x68,
-  Ethernet_FmtB = 0x69,
+  EthernetFmtA = 0x68,
+  EthernetFmtB = 0x69,
   Tspi          = 0x70,
   Can           = 0x78,
   FibreCh       = 0x79,
-  Pcm_FmtA      = 0x09,
-  Pcm_FmtB      = 0x0A,
+  PcmFmtA      = 0x09,
+  PcmFmtB      = 0x0A,
 }
 
 /** Human-readable badge label for a data type */
 export function dataTypeBadge(dt: DataType): { label: string; css: string } {
   switch (dt) {
-    case DataType.Mil1553_FmtA:
-    case DataType.Mil1553_FmtB:
+    case DataType.Mil1553FmtA:
+    case DataType.Mil1553FmtB:
       return { label: "1553", css: "badge--1553" };
-    case DataType.Pcm_FmtA:
-    case DataType.Pcm_FmtB:
+    case DataType.PcmFmtA:
+    case DataType.PcmFmtB:
       return { label: "PCM", css: "badge--pcm" };
     case DataType.Time:
       return { label: "Time", css: "badge--time" };
-    case DataType.Video_FmtA:
-    case DataType.Video_FmtB:
+    case DataType.VideoFmtA:
+    case DataType.VideoFmtB:
       return { label: "Video", css: "badge--video" };
     case DataType.Arinc429:
       return { label: "ARINC", css: "badge--arinc" };
@@ -58,8 +58,8 @@ export function dataTypeBadge(dt: DataType): { label: string; css: string } {
       return { label: "Message", css: "badge--message" };
     case DataType.Uart:
       return { label: "UART", css: "badge--uart" };
-    case DataType.Ethernet_FmtA:
-    case DataType.Ethernet_FmtB:
+    case DataType.EthernetFmtA:
+    case DataType.EthernetFmtB:
       return { label: "Ethernet", css: "badge--ethernet" };
     default:
       return { label: `0x${dt.toString(16).padStart(2, "0")}`, css: "badge--message" };
