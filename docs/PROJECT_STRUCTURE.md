@@ -1,86 +1,236 @@
-<!-- docs/PROJECT_STRUCTURE.md -->
+# IRIG106-Studio — Project Structure
 
-# Project Structure
+This document maps every file in the project, explains what it does,
+and shows how the pieces connect. If you're new to the codebase, start
+here.
 
-```text
-irig106-studio/
-|-- docs/
-|   |-- architecture.md
-|   |-- implementation-plan.md
-|   |-- PROJECT_STRUCTURE.md
-|   |-- ui-guidelines.md
-|   |-- ui-prompt-for-initial-test.md
-|   |-- implementation/
-|   |   |-- README.md
-|   |   |-- 01-foundations-and-rules.md
-|   |   |-- 02-browser-shell.md
-|   |   |-- 03-state-actions-and-rendering.md
-|   |   |-- 04-service-boundary-and-file-intake.md
-|   |   |-- 05-worker-model-and-message-flow.md
-|   |   |-- 06-wasm-integration-and-external-core-pause.md
-|   |   |-- 07-performance-copying-and-large-files.md
-|   |   `-- 08-first-vertical-slices-and-breadcrumbs.md
-|   `-- images/
-|       `-- implementation/
-|-- crates/
-|   |-- irig106-server/   # optional future native/server/desktop reuse; may need rename
-|   |   |-- src/
-|   |   `-- Cargo.toml
-|   `-- irig106-wasm/
-|       |-- src/
-|       `-- Cargo.toml
-|-- app/
-|   |-- src/
-|   |   |-- index.html
-|   |   |-- styles/
-|   |   |   |-- tokens.css
-|   |   |   |-- base.css
-|   |   |   |-- layout.css
-|   |   |   `-- components.css
-|   |   `-- js/
-|   |       |-- main.js
-|   |       |-- app/
-|   |       |   |-- bootstrap.js
-|   |       |   |-- router.js
-|   |       |   |-- state.js
-|   |       |   |-- actions.js
-|   |       |   `-- events.js
-|   |       |-- services/
-|   |       |   |-- wasm-engine.js
-|   |       |   |-- storage.js
-|   |       |   |-- worker-client.js
-|   |       |   `-- api-client.js
-|   |       |-- features/
-|   |       |   |-- source-explorer/
-|   |       |   |-- workspace/
-|   |       |   |-- analysis/
-|   |       |   |-- inspector/
-|   |       |   `-- jobs/
-|   |       `-- ui/
-|   |           |-- render/
-|   |           |-- controls/
-|   |           `-- dialogs/
-|   |-- workers/
-|   |   `-- analysis-worker.js
-|   |-- wasm/
-|   |   `-- generated bindings or loader integration
-|   `-- public/
-|-- scripts/
-|-- tests/
-|   |-- first_test.rs
-|   |-- second_test.rs
-|   `-- fuzz_compat.rs
-|-- benches/
-|   |-- first_bench.rs
-|   `-- second_bench.rs
-|-- .github/
-|   |-- workflows/
-|   |   |-- ci.yml
-|   |   |-- lint.yml
-|   |   |-- fuzz.yml
-|   |   `-- docs.yml
-|   `-- ISSUE_TEMPLATE.md
-|-- Cargo.toml
-|-- README.md
-`-- LICENSE
+## Directory Layout
+
 ```
+irig106-studio/
+│
+├── index.html                          Entry point — loads Vite + app
+├── vite.config.ts                      Vite build config (dev server, Tauri integration)
+├── tsconfig.json                       TypeScript config (strict, path aliases)
+├── tsconfig.node.json                  TypeScript config for Vite config file
+├── package.json                        npm dependencies and scripts
+├── .gitignore
+│
+├── src/                                ── FRONTEND (TypeScript + CSS) ──
+│   │
+│   ├── main.ts                         App bootstrap — creates all components,
+│   │                                   wires them to the platform adapter,
+│   │                                   registers keyboard shortcuts and drag-drop.
+│   │                                   THIS IS THE WIRING DIAGRAM.
+│   │
+│   ├── types/
+│   │   └── domain.ts                   Shared domain types (Ch10FileInfo, Channel,
+│   │                                   PacketHeader, DataType enum, IrigTime, etc.)
+│   │                                   THE CONTRACT between UI and backend.
+│   │                                   [ADR-006]
+│   │
+│   ├── platform/
+│   │   └── adapter.ts                  Platform abstraction layer — the ONE boundary.
+│   │                                   Defines PlatformAdapter interface.
+│   │                                   Contains MockAdapter (active), TauriAdapter (stub),
+│   │                                   WasmAdapter (future).
+│   │                                   [ADR-002]
+│   │
+│   ├── components/
+│   │   ├── toolbar.ts                  Top bar: brand, menus, transport controls,
+│   │   │                               IRIG time display, theme toggle, version.
+│   │   │
+│   │   ├── channel-tree.ts             Left sidebar: file → data sources → channels.
+│   │   │                               Click a channel → properties panel updates.
+│   │   │
+│   │   ├── viewport.ts                 Center: 4 tabbed views (Waveform, Hex,
+│   │   │                               Packets, TMATS). Waveform uses Canvas2D.
+│   │   │
+│   │   ├── bottom-panel.ts             Bottom: 4 tabbed views (Console, Statistics,
+│   │   │                               Time Correlation, Errors).
+│   │   │
+│   │   ├── properties-panel.ts         Right sidebar: selected channel props,
+│   │   │                               packet-at-cursor details, checksum status.
+│   │   │
+│   │   ├── statusbar.ts               Bottom strip: ready/loading/error indicator,
+│   │   │                               packet count, duration, file size, version.
+│   │   │
+│   │   ├── keyboard-shortcuts.ts       Centralized keymap (declarative array),
+│   │   │                               single document-level listener, modifier
+│   │   │                               abstraction (Cmd/Ctrl). [ADR-005]
+│   │   │
+│   │   ├── shortcuts-overlay.ts        Help modal (? / F1): shows all shortcuts
+│   │   │                               grouped by category, platform-correct labels.
+│   │   │
+│   │   ├── drag-drop.ts               Full-window drop zone for .ch10/.c10 files.
+│   │   │                               Visual overlay with valid/invalid states.
+│   │   │
+│   │   └── theme-switcher.ts           Dark/light theme toggle. Persists to
+│   │                                   localStorage. Applies data-theme attribute.
+│   │
+│   └── styles/
+│       ├── tokens.css                  Design tokens: two themes (dark Omniverse,
+│       │                               light Isaac Sim), data type badge colors,
+│       │                               typography, spacing, layout constants.
+│       │                               [ADR-003]
+│       │
+│       ├── app.css                     Full layout (toolbar, panels, resize handles),
+│       │                               all component styles (tree, badges, props,
+│       │                               console, waveform, overlays).
+│       │
+│       └── reset.css                   Minimal CSS reset, scrollbar styling.
+│
+├── src-tauri/                          ── DESKTOP BACKEND (Rust + Tauri v2) ──
+│   │                                   [ADR-001]
+│   │
+│   ├── tauri.conf.json                 Tauri config: window size, CSP, build commands.
+│   ├── Cargo.toml                      Rust dependencies (tauri, plugins, core crate).
+│   ├── build.rs                        Tauri build script.
+│   └── src/
+│       ├── main.rs                     Desktop entry point (windows_subsystem).
+│       └── lib.rs                      #[tauri::command] functions:
+│                                       open_ch10_file(), read_packet_headers(),
+│                                       read_packet_data(). Currently stubs;
+│                                       swap in irig106-studio-core when ready.
+│
+├── crates/                             ── CORE RUST LIBRARY ──
+│   └── irig106-studio-core/
+│       ├── Cargo.toml                  Pure Rust, no platform deps in public API.
+│       │                               Compiles to native AND wasm32.
+│       └── src/
+│           ├── lib.rs                  Crate root — re-exports public API.
+│           ├── types.rs                Domain types (Rust mirror of domain.ts).
+│           ├── error.rs                StudioError enum — all error cases.
+│           ├── io.rs                   FileBuffer trait + MmapBuffer (native)
+│           │                           + MemBuffer (wasm/test).
+│           ├── file.rs                 Ch10File — open, index, summary, read.
+│           ├── index.rs                PacketIndex — scan file, build lookup table.
+│           ├── summary.rs              Ch10Summary — aggregate for frontend.
+│           ├── decode.rs               Data type decoders (1553, PCM, etc.) — stubs.
+│           ├── time.rs                 TimeCorrelator — RTC→IRIG time — stub.
+│           └── tmats.rs                TmatsMetadata — Ch9 parser wrapper — stub.
+│
+├── docs/                               ── DOCUMENTATION ──
+│   │
+│   ├── requirements/
+│   │   ├── L1-requirements.md          25 top-level SHALL statements.
+│   │   ├── L2-requirements.md          65+ decomposed requirements with status.
+│   │   └── traceability-matrix.md      L1 → L2 → source → verification mapping.
+│   │
+│   ├── adr/
+│   │   ├── README.md                   ADR index + template.
+│   │   ├── ADR-001-tauri-v2.md         Desktop framework selection.
+│   │   ├── ADR-002-platform-abstraction.md  UI–backend boundary.
+│   │   ├── ADR-003-dark-theme.md       Omniverse aesthetic + light theme.
+│   │   ├── ADR-004-vanilla-typescript.md  No framework, factory-function components.
+│   │   ├── ADR-005-keyboard-shortcuts.md  Centralized keymap system.
+│   │   └── ADR-006-domain-types.md     Domain types as the contract.
+│   │
+│   ├── PROJECT_STRUCTURE.md            ← YOU ARE HERE
+│   └── CONTRIBUTING.md                 Onboarding guide for new developers.
+│
+└── dist/                               Vite build output (gitignored).
+```
+
+## Data Flow
+
+```
+User action (click, keyboard, drag-drop)
+        │
+        ▼
+    main.ts                     ← dispatches to the correct component
+        │
+        ▼
+    PlatformAdapter.method()    ← e.g. openFile(), readPacketHeaders()
+        │
+        ├── MockAdapter          → returns synthetic data (dev mode)
+        ├── TauriAdapter         → invoke("command_name", args) → Rust IPC
+        └── WasmAdapter          → wasm-bindgen call → irig106-studio-core
+                │
+                ▼
+        irig106-studio-core      ← Ch10File.open() → PacketIndex → Ch10Summary
+                │
+                ▼
+    loadSummary(summary)         ← THE SINGLE ENTRY POINT for all data into UI
+        │
+        ├── tree.setSummary()
+        ├── viewport.setSummary()
+        ├── statusbar.setFileInfo()
+        ├── toolbar.setVersion()
+        └── toolbar.setTime()
+```
+
+## Component API Pattern
+
+Every component follows the same factory-function pattern [ADR-004]:
+
+```typescript
+export function createFoo(
+  container: HTMLElement,         // DOM element to render into
+  callbacks: FooCallbacks         // events flowing OUT (clicks, selections)
+): {
+  setData(data: SomeType): void;  // data flowing IN (updates from backend)
+  clear(): void;                  // reset state
+} {
+  container.innerHTML = `...`;    // render initial DOM
+  // bind events
+  // return update API
+}
+```
+
+Components are created in `main.ts`, which is the only file that
+knows about all components simultaneously. Components never import
+each other.
+
+## Theme System
+
+Themes are controlled by `[data-theme]` on `<html>`:
+
+```
+tokens.css defines two rule sets:
+  :root, [data-theme="dark"]  { --c-surface: #222226; ... }
+  [data-theme="light"]        { --c-surface: #f2f0ea; ... }
+
+theme-switcher.ts:
+  initTheme()    → reads localStorage, applies attribute
+  toggleTheme()  → flips attribute, persists, returns new theme
+
+toolbar.ts:
+  ◐ button → calls onThemeToggle callback → main.ts → doToggleTheme()
+
+Keyboard: Ctrl+Shift+T toggles theme.
+```
+
+All colors in CSS and Canvas use CSS variables. When the data-theme
+attribute changes, everything updates instantly — no page reload.
+
+## Adding a New Feature — Checklist
+
+1. **Define the requirement** — Add an L2 entry in `L2-requirements.md`
+   with a parent L1 trace, source file, and status.
+
+2. **Update the domain types** — If new data is needed, add it to
+   `src/types/domain.ts` AND `crates/irig106-studio-core/src/types.rs`.
+
+3. **Update the platform adapter** — Add the method to the
+   `PlatformAdapter` interface, then implement it in MockAdapter
+   (with synthetic data), TauriAdapter (stub or real), and
+   WasmAdapter (stub or real).
+
+4. **Build the component** — Create `src/components/your-thing.ts`
+   using the factory-function pattern. No framework imports.
+
+5. **Wire it in main.ts** — Create the component, connect its
+   callbacks, feed it data from `loadSummary()` or wherever.
+
+6. **Add keyboard shortcut** — Add an entry to `KEYMAP[]` in
+   `keyboard-shortcuts.ts`, add a handler case in `main.ts`.
+
+7. **Add CSS** — Put styles in `app.css`. Use CSS variables from
+   `tokens.css` — never hardcode colors.
+
+8. **Update traceability** — Update the traceability matrix with
+   the new L2 → source → verification mapping.
+
+9. **Write an ADR** — If the decision was non-obvious, write one
+   in `docs/adr/`.

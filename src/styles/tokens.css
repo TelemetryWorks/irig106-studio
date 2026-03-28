@@ -1,0 +1,202 @@
+/*
+ * IRIG106-Studio Design Tokens
+ *
+ * Two themes, switchable via [data-theme] on <html>:
+ *   "dark"   — NVIDIA Omniverse / dark IDE aesthetic
+ *   "light"  — Isaac Sim neutral / light workstation aesthetic
+ *
+ * Default is dark. Theme preference is persisted in localStorage.
+ *
+ * Three-tier surface system:
+ *   base     → app background, toolbar
+ *   surface  → panels
+ *   raised   → active tabs, inputs, hover states
+ *
+ * Requirements traced:
+ *   L2-THEME-010  System SHALL support dark and light themes
+ *   L2-THEME-020  Theme selection SHALL persist across sessions
+ *   L2-THEME-030  Theme switch SHALL not require page reload
+ */
+
+/* ══════════════════════════════════════════
+   Dark theme (default)
+   ══════════════════════════════════════════ */
+
+:root,
+[data-theme="dark"] {
+  /* ── Surfaces ── */
+  --c-base:            #1a1a1e;
+  --c-surface:         #222226;
+  --c-raised:          #2a2a2f;
+  --c-raised-hover:    #323238;
+  --c-inset:           #18181c;
+
+  /* ── Borders ── */
+  --c-border-subtle:   rgba(255,255,255,0.06);
+  --c-border-default:  rgba(255,255,255,0.10);
+  --c-border-secondary:rgba(255,255,255,0.16);
+  --c-border-primary:  rgba(255,255,255,0.24);
+
+  /* ── Text ── */
+  --c-text-primary:    #e0dfd8;
+  --c-text-secondary:  #9a998f;
+  --c-text-tertiary:   #6b6a62;
+  --c-text-disabled:   #4a4a44;
+
+  /* ── Accent: Omniverse green ── */
+  --c-accent:          #76b900;
+  --c-accent-dim:      #5a8e00;
+  --c-accent-subtle:   rgba(118,185,0,0.12);
+  --c-accent-text:     #8fd11a;
+
+  /* ── Semantic ── */
+  --c-info:            #3b8bdd;
+  --c-info-dim:        rgba(59,139,221,0.15);
+  --c-success:         #1d9e75;
+  --c-success-dim:     rgba(29,158,117,0.15);
+  --c-warning:         #d4a026;
+  --c-warning-dim:     rgba(212,160,38,0.15);
+  --c-danger:          #e24b4a;
+  --c-danger-dim:      rgba(226,75,74,0.15);
+
+  /* ── Waveform colors ── */
+  --c-waveform-1553:   #3b8bdd;
+  --c-waveform-pcm:    #1d9e75;
+  --c-waveform-grid:   rgba(255,255,255,0.05);
+  --c-waveform-grid-v: rgba(255,255,255,0.04);
+  --c-playhead:        #e24b4a;
+
+  /* ── Data type badge colors ── */
+  --c-dt-1553:         #3b8bdd;
+  --c-dt-1553-bg:      rgba(59,139,221,0.14);
+  --c-dt-pcm:          #1d9e75;
+  --c-dt-pcm-bg:       rgba(29,158,117,0.14);
+  --c-dt-time:         #d4a026;
+  --c-dt-time-bg:      rgba(212,160,38,0.14);
+  --c-dt-video:        #e24b4a;
+  --c-dt-video-bg:     rgba(226,75,74,0.14);
+  --c-dt-arinc:        #b07cd8;
+  --c-dt-arinc-bg:     rgba(176,124,216,0.14);
+  --c-dt-analog:       #d8856e;
+  --c-dt-analog-bg:    rgba(216,133,110,0.14);
+  --c-dt-discrete:     #6eb8d8;
+  --c-dt-discrete-bg:  rgba(110,184,216,0.14);
+  --c-dt-message:      #8b9dc3;
+  --c-dt-message-bg:   rgba(139,157,195,0.14);
+  --c-dt-uart:         #c3b08b;
+  --c-dt-uart-bg:      rgba(195,176,139,0.14);
+  --c-dt-ethernet:     #7bc378;
+  --c-dt-ethernet-bg:  rgba(123,195,120,0.14);
+}
+
+/* ══════════════════════════════════════════
+   Light theme (Isaac Sim workstation)
+   ══════════════════════════════════════════ */
+
+[data-theme="light"] {
+  /* ── Surfaces ── */
+  --c-base:            #e8e6df;
+  --c-surface:         #f2f0ea;
+  --c-raised:          #ffffff;
+  --c-raised-hover:    #f7f6f2;
+  --c-inset:           #e0ded7;
+
+  /* ── Borders ── */
+  --c-border-subtle:   rgba(0,0,0,0.06);
+  --c-border-default:  rgba(0,0,0,0.10);
+  --c-border-secondary:rgba(0,0,0,0.16);
+  --c-border-primary:  rgba(0,0,0,0.24);
+
+  /* ── Text ── */
+  --c-text-primary:    #2c2c2a;
+  --c-text-secondary:  #5f5e5a;
+  --c-text-tertiary:   #888780;
+  --c-text-disabled:   #b4b2a9;
+
+  /* ── Accent: deeper green for light bg ── */
+  --c-accent:          #4a8c00;
+  --c-accent-dim:      #3a7000;
+  --c-accent-subtle:   rgba(74,140,0,0.10);
+  --c-accent-text:     #3a7000;
+
+  /* ── Semantic ── */
+  --c-info:            #185fa5;
+  --c-info-dim:        rgba(24,95,165,0.10);
+  --c-success:         #0f6e56;
+  --c-success-dim:     rgba(15,110,86,0.10);
+  --c-warning:         #854f0b;
+  --c-warning-dim:     rgba(133,79,11,0.10);
+  --c-danger:          #a32d2d;
+  --c-danger-dim:      rgba(163,45,45,0.10);
+
+  /* ── Waveform colors ── */
+  --c-waveform-1553:   #185fa5;
+  --c-waveform-pcm:    #0f6e56;
+  --c-waveform-grid:   rgba(0,0,0,0.06);
+  --c-waveform-grid-v: rgba(0,0,0,0.04);
+  --c-playhead:        #a32d2d;
+
+  /* ── Data type badge colors (darker for light bg) ── */
+  --c-dt-1553:         #185fa5;
+  --c-dt-1553-bg:      rgba(24,95,165,0.10);
+  --c-dt-pcm:          #0f6e56;
+  --c-dt-pcm-bg:       rgba(15,110,86,0.10);
+  --c-dt-time:         #854f0b;
+  --c-dt-time-bg:      rgba(133,79,11,0.10);
+  --c-dt-video:        #a32d2d;
+  --c-dt-video-bg:     rgba(163,45,45,0.10);
+  --c-dt-arinc:        #6a3d99;
+  --c-dt-arinc-bg:     rgba(106,61,153,0.10);
+  --c-dt-analog:       #994020;
+  --c-dt-analog-bg:    rgba(153,64,32,0.10);
+  --c-dt-discrete:     #1a7a9c;
+  --c-dt-discrete-bg:  rgba(26,122,156,0.10);
+  --c-dt-message:      #3d5280;
+  --c-dt-message-bg:   rgba(61,82,128,0.10);
+  --c-dt-uart:         #806a3d;
+  --c-dt-uart-bg:      rgba(128,106,61,0.10);
+  --c-dt-ethernet:     #2d802a;
+  --c-dt-ethernet-bg:  rgba(45,128,42,0.10);
+}
+
+/* ══════════════════════════════════════════
+   Shared (theme-independent)
+   ══════════════════════════════════════════ */
+
+:root {
+  /* ── Typography ── */
+  --font-ui:           "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono:         "JetBrains Mono", "Cascadia Code", "Fira Code", "SF Mono", monospace;
+  --fs-xs:             10px;
+  --fs-sm:             11px;
+  --fs-base:           12px;
+  --fs-md:             13px;
+  --fs-lg:             14px;
+  --lh-tight:          1.3;
+  --lh-normal:         1.5;
+
+  /* ── Spacing ── */
+  --sp-1:              2px;
+  --sp-2:              4px;
+  --sp-3:              6px;
+  --sp-4:              8px;
+  --sp-5:              10px;
+  --sp-6:              12px;
+  --sp-8:              16px;
+
+  /* ── Radii ── */
+  --r-sm:              3px;
+  --r-md:              4px;
+  --r-lg:              6px;
+
+  /* ── Layout ── */
+  --toolbar-h:         34px;
+  --tab-h:             28px;
+  --statusbar-h:       22px;
+  --panel-gap:         1px;
+  --resize-handle:     4px;
+
+  /* ── Transitions ── */
+  --t-fast:            80ms ease;
+  --t-normal:          150ms ease;
+}

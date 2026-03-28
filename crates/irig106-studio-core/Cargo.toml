@@ -1,0 +1,35 @@
+[package]
+name = "irig106-studio-core"
+version = "0.1.0"
+edition = "2021"
+description = "Core logic for IRIG106-Studio — Ch10 file parsing, indexing, and data extraction"
+authors = ["Joey"]
+license = "MIT OR Apache-2.0"
+
+# This crate must compile to both native (Tauri) and wasm32 targets.
+# No platform-specific dependencies allowed in the public API.
+
+[dependencies]
+# Ch10 file parsing (wire in as they're ready)
+# irig106 = { path = "../../irig106" }
+# irig106-time = { path = "../../irig106-time" }
+# irig106-tmats = { path = "../../irig106-tmats" }
+
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+# Native-only: memory-mapped I/O for large files
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+memmap2 = "0.9"
+
+[dev-dependencies]
+# Will add test fixtures and proptest later
+
+[features]
+default = []
+# Enable when building for wasm32 target
+wasm = []
+
+[lib]
+name = "irig106_studio_core"
+crate-type = ["lib"]
