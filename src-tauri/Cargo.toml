@@ -20,8 +20,7 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # Core library — the shared Rust backend
-# Uncomment when ready to integrate real Ch10 parsing:
-# irig106-studio-core = { path = "../crates/irig106-studio-core" }
+irig106-studio-core = { path = "../crates/irig106-studio-core" }
 
 # Future: wire in the standalone crates
 # irig106-time = { path = "../../irig106-time" }

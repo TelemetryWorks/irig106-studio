@@ -4,202 +4,140 @@
 //! calls via `invoke()`. Each command maps 1:1 to a method on the
 //! `PlatformAdapter` interface in TypeScript.
 //!
-//! Currently these return mock/stub data. Once the real crates are ready
-//! (irig106-studio-core, irig106-time, irig106-tmats), swap in real
-//! implementations — the frontend doesn't change at all.
+//! The commands now call real `irig106-studio-core` functions. A
+//! `Mutex<Option<Ch10File>>` holds the currently open file in app state.
+//!
+//! Requirements traced:
+//!   L2-PLAT-050  TauriAdapter SHALL map 1:1 to #[tauri::command] functions
+//!   L2-FILE-030  Tauri backend SHALL use tauri-plugin-dialog for open dialog
 
-use serde::{Deserialize, Serialize};
+use irig106_studio_core::file::Ch10File;
+use irig106_studio_core::summary::Ch10Summary;
+use irig106_studio_core::types::PacketHeader;
+use serde::Serialize;
+use std::path::Path;
+use std::sync::Mutex;
+use tauri::State;
 
-// ─── Domain types (mirrors src/types/domain.ts) ───
+// ─── App State ───
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Ch10FileInfo {
-    pub filename: String,
-    pub filepath: String,
-    pub file_size: u64,
-    pub packet_count: u64,
-    pub duration_sec: f64,
-    pub standard_version: String,
+/// Holds the currently open Ch10 file, shared across commands.
+struct AppState {
+    file: Mutex<Option<Ch10File>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Channel {
-    pub channel_id: u16,
-    pub data_type: u8,
-    pub label: String,
-    pub data_source_id: String,
-    pub packet_count: u64,
-    pub data_rate: u64,
+// ─── Serializable types for the frontend ───
+// These wrap irig106-studio-core types with serde for JSON transport.
+
+#[derive(Debug, Serialize)]
+struct PacketHeaderDto {
+    sync_pattern: u16,
+    channel_id: u16,
+    packet_length: u32,
+    data_length: u32,
+    data_type_version: u8,
+    sequence_number: u8,
+    data_type: u8,
+    rtc: u64,
+    checksum_valid: bool,
+    file_offset: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DataSource {
-    pub id: String,
-    pub label: String,
-    pub channels: Vec<Channel>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Ch10Summary {
-    pub file: Ch10FileInfo,
-    pub data_sources: Vec<DataSource>,
-    pub tmats_raw: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PacketHeader {
-    pub sync_pattern: u16,
-    pub channel_id: u16,
-    pub packet_length: u32,
-    pub data_length: u32,
-    pub data_type_version: u8,
-    pub sequence_number: u8,
-    pub data_type: u8,
-    pub rtc: u64,
-    pub checksum_valid: bool,
-    pub file_offset: u64,
+impl From<&PacketHeader> for PacketHeaderDto {
+    fn from(h: &PacketHeader) -> Self {
+        Self {
+            sync_pattern: h.sync_pattern,
+            channel_id: h.channel_id,
+            packet_length: h.packet_length,
+            data_length: h.data_length,
+            data_type_version: h.data_type_version,
+            sequence_number: h.sequence_number,
+            data_type: h.data_type,
+            rtc: h.rtc,
+            checksum_valid: h.checksum_valid,
+            file_offset: h.file_offset,
+        }
+    }
 }
 
 // ─── Tauri Commands ───
 
-/// Open a Ch10 file via the native file dialog.
+/// Open a Ch10 file from a filesystem path.
 ///
-/// This is where irig106-studio-core will plug in:
-///   1. Use tauri-plugin-dialog to get the file path
-///   2. Open & mmap the file via irig106-studio-core
-///   3. Parse the TMATS header (irig106-tmats)
-///   4. Build the channel index
-///   5. Return the summary to the frontend
+/// If `path` is None, a file dialog is shown (requires tauri-plugin-dialog).
+/// Returns the Ch10Summary for the frontend to populate all panels.
 #[tauri::command]
-fn open_ch10_file(path: Option<String>) -> Result<Ch10Summary, String> {
-    // TODO: Replace with real implementation
-    // let file = irig106_studio_core::open(path)?;
-    // let summary = file.summary()?;
+fn open_ch10_file(
+    path: String,
+    state: State<'_, AppState>,
+) -> Result<Ch10Summary, String> {
+    let file = Ch10File::open(Path::new(&path))
+        .map_err(|e| format!("Failed to open file: {}", e))?;
 
-    let _path = path.unwrap_or_else(|| "flight_test_042.ch10".into());
+    let summary = file.summary()
+        .map_err(|e| format!("Failed to build summary: {}", e))?;
 
-    Ok(Ch10Summary {
-        file: Ch10FileInfo {
-            filename: "flight_test_042.ch10".into(),
-            filepath: _path,
-            file_size: 2_400_000_000,
-            packet_count: 1_247_832,
-            duration_sec: 2535.0,
-            standard_version: "106-17".into(),
-        },
-        data_sources: vec![
-            DataSource {
-                id: "DS-1".into(),
-                label: "Recorder 1".into(),
-                channels: vec![
-                    Channel {
-                        channel_id: 1,
-                        data_type: 0x19,
-                        label: "1553 Bus A".into(),
-                        data_source_id: "DS-1".into(),
-                        packet_count: 248_192,
-                        data_rate: 1_200_000,
-                    },
-                    Channel {
-                        channel_id: 2,
-                        data_type: 0x19,
-                        label: "1553 Bus B".into(),
-                        data_source_id: "DS-1".into(),
-                        packet_count: 241_017,
-                        data_rate: 1_150_000,
-                    },
-                    Channel {
-                        channel_id: 3,
-                        data_type: 0x09,
-                        label: "PCM Stream 1".into(),
-                        data_source_id: "DS-1".into(),
-                        packet_count: 312_445,
-                        data_rate: 2_500_000,
-                    },
-                    Channel {
-                        channel_id: 4,
-                        data_type: 0x11,
-                        label: "IRIG Time".into(),
-                        data_source_id: "DS-1".into(),
-                        packet_count: 2_535,
-                        data_rate: 1_000,
-                    },
-                    Channel {
-                        channel_id: 5,
-                        data_type: 0x40,
-                        label: "HUD Camera".into(),
-                        data_source_id: "DS-1".into(),
-                        packet_count: 76_140,
-                        data_rate: 8_000_000,
-                    },
-                ],
-            },
-            DataSource {
-                id: "DS-2".into(),
-                label: "Recorder 2".into(),
-                channels: vec![
-                    Channel {
-                        channel_id: 6,
-                        data_type: 0x38,
-                        label: "ARINC 429 Bus 1".into(),
-                        data_source_id: "DS-2".into(),
-                        packet_count: 185_300,
-                        data_rate: 800_000,
-                    },
-                    Channel {
-                        channel_id: 7,
-                        data_type: 0x68,
-                        label: "Ethernet Ch 1".into(),
-                        data_source_id: "DS-2".into(),
-                        packet_count: 182_203,
-                        data_rate: 4_200_000,
-                    },
-                ],
-            },
-        ],
-        tmats_raw: r#"R-1\ID:Flight Test 042;
-R-1\NSS:2;
-R-1\DSI-1:Recorder_1;
-R-1\DSI-2:Recorder_2;"#
-            .into(),
-    })
+    // Store the file in app state
+    let mut guard = state.file.lock().map_err(|e| e.to_string())?;
+    *guard = Some(file);
+
+    Ok(summary)
 }
 
 /// Read a batch of packet headers for virtual scrolling.
 ///
-/// Future: mmap'd read from irig106-studio-core packet index.
+/// Returns up to `count` headers starting at `start_index`.
 #[tauri::command]
-fn read_packet_headers(start_index: u64, count: u32) -> Result<Vec<PacketHeader>, String> {
-    let mut headers = Vec::with_capacity(count as usize);
-    let data_types: [u8; 5] = [0x19, 0x19, 0x09, 0x11, 0x40];
+fn read_packet_headers(
+    start_index: u64,
+    count: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<PacketHeaderDto>, String> {
+    let guard = state.file.lock().map_err(|e| e.to_string())?;
+    let file = guard.as_ref().ok_or("No file open")?;
 
-    for i in 0..count as u64 {
-        let idx = start_index + i;
-        headers.push(PacketHeader {
-            sync_pattern: 0xEB25,
-            channel_id: (idx % 5 + 1) as u16,
-            packet_length: (128 + idx % 256) as u32,
-            data_length: (64 + idx % 192) as u32,
-            data_type_version: 1,
-            sequence_number: (idx % 256) as u8,
-            data_type: data_types[(idx % 5) as usize],
-            rtc: idx * 100_000,
-            checksum_valid: idx % 47 != 0,
-            file_offset: idx * 384,
-        });
+    let total = file.index().len();
+    let start = start_index as usize;
+    let end = (start + count as usize).min(total);
+
+    let mut headers = Vec::with_capacity(end - start);
+    for i in start..end {
+        let h = file.read_header(i)
+            .map_err(|e| format!("Failed to read header {}: {}", i, e))?;
+        headers.push(PacketHeaderDto::from(&h));
     }
 
     Ok(headers)
 }
 
-/// Read raw bytes from a packet's data payload (hex view).
+/// Read raw bytes from a packet's data payload.
 ///
-/// Future: direct file read via irig106-studio-core.
+/// Returns the raw bytes for the hex view.
 #[tauri::command]
-fn read_packet_data(file_offset: u64, length: u32) -> Result<Vec<u8>, String> {
-    let _ = file_offset;
-    // Return random-ish bytes for demo
-    Ok((0..length).map(|i| ((i * 7 + 13) % 256) as u8).collect())
+fn read_packet_data(
+    file_offset: u64,
+    length: u32,
+    state: State<'_, AppState>,
+) -> Result<Vec<u8>, String> {
+    let guard = state.file.lock().map_err(|e| e.to_string())?;
+    let file = guard.as_ref().ok_or("No file open")?;
+
+    let data = file.read_data(file_offset, length as usize)
+        .map_err(|e| format!("Failed to read data at {:#x}: {}", file_offset, e))?;
+
+    Ok(data.to_vec())
+}
+
+/// Extract raw TMATS text from channel 0.
+#[tauri::command]
+fn get_tmats(
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let guard = state.file.lock().map_err(|e| e.to_string())?;
+    let file = guard.as_ref().ok_or("No file open")?;
+
+    file.extract_tmats()
+        .map_err(|e| format!("Failed to extract TMATS: {}", e))
 }
 
 // ─── App setup ───
@@ -207,12 +145,16 @@ fn read_packet_data(file_offset: u64, length: u32) -> Result<Vec<u8>, String> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .manage(AppState {
+            file: Mutex::new(None),
+        })
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .invoke_handler(tauri::generate_handler![
             open_ch10_file,
             read_packet_headers,
             read_packet_data,
+            get_tmats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running IRIG106-Studio");

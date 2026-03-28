@@ -1,0 +1,9 @@
+[workspace]
+resolver = "2"
+members = [
+    "src-tauri",
+    "crates/irig106-studio-core",
+    # WASM crate excluded from default workspace build —
+    # it requires wasm32 target and wasm-pack. Build separately:
+    #   cd crates/irig106-studio-wasm && wasm-pack build --target web
+]

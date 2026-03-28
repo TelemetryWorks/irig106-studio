@@ -128,30 +128,63 @@ class MockAdapter implements PlatformAdapter {
   }
 }
 
-// ── Tauri adapter (stub — filled in when backend crates are ready) ──
+// ── Tauri adapter (desktop — calls Rust via IPC) ──
 
 export class TauriAdapter implements PlatformAdapter {
   readonly name = "tauri" as const;
+  private logListeners: Set<(entry: LogEntry) => void> = new Set();
+
+  private emit(level: LogEntry["level"], message: string) {
+    const ts = formatTimestamp();
+    this.logListeners.forEach((cb) => cb({ timestamp: ts, level, message }));
+  }
+
+  private async invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+    // Dynamic import so non-Tauri builds don't fail
+    const { invoke } = await import(/* @vite-ignore */ "@tauri-apps/api/core");
+    return invoke<T>(cmd, args);
+  }
 
   async openFile(): Promise<Ch10Summary | null> {
-    // Will use: const { open } = await import("@tauri-apps/plugin-dialog");
-    // Then: const result = await invoke<Ch10Summary>("open_ch10_file", { path });
-    throw new Error("Tauri backend not yet implemented — use mock adapter");
+    // Open a file dialog using the Tauri dialog plugin
+    const { open } = await import(/* @vite-ignore */ "@tauri-apps/plugin-dialog");
+    const selected = await open({
+      title: "Open Ch10 File",
+      filters: [{ name: "IRIG 106 Ch10", extensions: ["ch10", "c10"] }],
+      multiple: false,
+    });
+
+    if (!selected) return null;
+    const path = typeof selected === "string" ? selected : selected.path;
+    if (!path) return null;
+
+    this.emit("info", `Opening ${path}`);
+
+    const summary = await this.invoke<Ch10Summary>("open_ch10_file", { path });
+
+    this.emit("info", `Loaded: ${summary.file.packetCount.toLocaleString()} packets`);
+
+    return summary;
   }
 
-  async readPacketHeaders(_startIndex: number, _count: number): Promise<PacketHeader[]> {
-    // Will use: return invoke("read_packet_headers", { startIndex, count });
-    throw new Error("Not implemented");
+  async readPacketHeaders(startIndex: number, count: number): Promise<PacketHeader[]> {
+    return this.invoke<PacketHeader[]>("read_packet_headers", {
+      startIndex,
+      count,
+    });
   }
 
-  async readPacketData(_fileOffset: number, _length: number): Promise<Uint8Array> {
-    // Will use: return invoke("read_packet_data", { fileOffset, length });
-    throw new Error("Not implemented");
+  async readPacketData(fileOffset: number, length: number): Promise<Uint8Array> {
+    const data = await this.invoke<number[]>("read_packet_data", {
+      fileOffset,
+      length,
+    });
+    return new Uint8Array(data);
   }
 
-  onLog(_callback: (entry: LogEntry) => void): () => void {
-    // Will use: const unlisten = await listen<LogEntry>("log-entry", (event) => callback(event.payload));
-    return () => {};
+  onLog(callback: (entry: LogEntry) => void): () => void {
+    this.logListeners.add(callback);
+    return () => this.logListeners.delete(callback);
   }
 }
 
@@ -291,16 +324,12 @@ let _adapter: PlatformAdapter | null = null;
 export function getPlatform(): PlatformAdapter {
   if (!_adapter) {
     if (isTauri()) {
-      console.log("[platform] Detected Tauri — using native adapter (falling back to mock)");
-      // Use mock until Tauri backend is implemented
-      _adapter = new MockAdapter();
+      console.log("[platform] Detected Tauri — using native adapter");
+      _adapter = new TauriAdapter();
     } else {
-      // In browser mode, try WASM first, fall back to mock
-      // The WasmAdapter will fail gracefully if the WASM module isn't built yet
+      // In browser mode, mock until WASM is built
       console.log("[platform] Browser mode — using mock adapter (WASM adapter available when built)");
       _adapter = new MockAdapter();
-      // When WASM is ready, switch the factory:
-      // _adapter = new WasmAdapter();
     }
   }
   return _adapter;

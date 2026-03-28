@@ -23,6 +23,14 @@ export default defineConfig({
     minify: !process.env.TAURI_ENV_DEBUG ? "esbuild" : false,
     // Produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
+    rollupOptions: {
+      // Tauri packages resolve at runtime inside the webview.
+      // In browser mode they're never called (factory picks MockAdapter).
+      external: [
+        "@tauri-apps/api/core",
+        "@tauri-apps/plugin-dialog",
+      ],
+    },
   },
   resolve: {
     alias: {

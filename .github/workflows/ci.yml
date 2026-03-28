@@ -10,9 +10,6 @@ jobs:
   frontend:
     name: Frontend (lint, test, build)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
 
     steps:
       - uses: actions/checkout@v4
@@ -38,12 +35,9 @@ jobs:
       - name: Test
         run: npm run test
 
-  core-crate:
-    name: Core crate (Rust)
+  rust-workspace:
+    name: Rust workspace (core + tauri)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: crates/irig106-studio-core
 
     steps:
       - uses: actions/checkout@v4
@@ -53,23 +47,55 @@ jobs:
         with:
           components: clippy, rustfmt
 
+      - name: Install Tauri system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+
       - name: Cache cargo
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            crates/irig106-studio-core/target
-          key: ${{ runner.os }}-cargo-core-${{ hashFiles('crates/irig106-studio-core/Cargo.toml') }}
+            target
+          key: ${{ runner.os }}-cargo-workspace-${{ hashFiles('**/Cargo.toml') }}
 
       - name: Check formatting
-        run: cargo fmt -- --check
+        run: cargo fmt --all -- --check
 
       - name: Clippy
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --workspace -- -D warnings
 
-      - name: Build
-        run: cargo build
+      - name: Build workspace
+        run: cargo build --workspace
 
-      - name: Test
-        run: cargo test
+      - name: Test workspace
+        run: cargo test --workspace
+
+  wasm:
+    name: WASM build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/irig106-studio-wasm/target
+          key: ${{ runner.os }}-cargo-wasm-${{ hashFiles('crates/irig106-studio-wasm/Cargo.toml') }}
+
+      - name: Build WASM
+        run: cd crates/irig106-studio-wasm && wasm-pack build --target web --out-dir ../../src/wasm
