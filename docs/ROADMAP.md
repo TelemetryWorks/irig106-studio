@@ -239,32 +239,41 @@ Blocked on Phase 4 decoders.
 
 ---
 
-## Dependency Graph
+## Current Status (updated 2026-03-28)
 
 ```
-Phase 0 (DONE)
+Phase 0 (DONE) ✓
     │
-    ├──→ Phase 1 (UI Polish + Testing)          ← UNBLOCKED, start now
+    ├──→ Phase 1 (UI Polish + Testing)          ✓ COMPLETE (14/14 tasks)
     │
-    ├──→ Phase 2A (Core Crate Tests)            ← UNBLOCKED, start now
+    ├──→ Phase 2A (Core Crate Tests)            ✓ COMPLETE (2.1–2.10)
     │       │
-    │       ├──→ Phase 2B (Tauri Integration)   ← needs 2A + irig106-tmats/time
+    │       ├──→ Phase 2B (Tauri Integration)   ✓ 2.9, 2.10, 2.13 DONE
+    │       │                                     2.11, 2.12 blocked on crates
     │       │
-    │       └──→ Phase 3 (WASM)                 ← needs 2A
-    │               │
-    │               └──→ Phase 3.5 (Large files) ← needs 3.4
+    │       └──→ Phase 3 (WASM)                 ✓ 3.1–3.3 DONE (scaffold + pipeline)
+    │               │                             3.4–3.6 ready after wasm-pack build
+    │               └──→ Phase 3.5 (Large files)  future
     │
-    └──→ Phase 4 (Decoders)                     ← needs spec knowledge + 2B
+    └──→ Phase 4 (Decoders)                     ← NEXT: needs spec knowledge
             │
             └──→ Phase 5 (Visualization)        ← needs Phase 4
                     │
                     └──→ Phase 6 (Multi-version) ← needs Phase 4 + test files
-
-Parallel tracks:
-  Phase 1 ─────────────────────────── (frontend, no Rust)
-  Phase 2A ────────────────────────── (Rust, no frontend)
-  Phase 3.1-3.3 ───────────────────── (WASM scaffold, after 2A)
 ```
 
-**Right now, Phase 1 and Phase 2A can run in parallel with zero
-dependencies on each other or on external crates.**
+### What to do right now
+
+1. `cargo test --workspace` — verify all 61 Rust tests pass
+2. `cargo tauri dev` — open a real .ch10 file in the desktop app
+3. `npm run build:wasm` — compile WASM module, then test in browser
+4. Start Phase 4 decoders (1553, PCM, ARINC) as spec knowledge is codified
+
+### What's blocked
+
+| Task | Blocked on |
+|---|---|
+| TMATS-driven channel labels (2.11) | `irig106-tmats` crate |
+| Time correlation (2.12) | `irig106-time` crate |
+| Data decoders (Phase 4) | Spec-level format knowledge |
+| Real waveform data (Phase 5) | Phase 4 decoders |

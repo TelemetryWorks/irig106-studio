@@ -9,11 +9,14 @@ here.
 ```
 irig106-studio/
 │
+├── Cargo.toml                          Rust workspace (core + tauri)
 ├── index.html                          Entry point — loads Vite + app
-├── vite.config.ts                      Vite build config (dev server, Tauri integration)
+├── vite.config.ts                      Vite build config (dev server, Tauri, tests)
 ├── tsconfig.json                       TypeScript config (strict, path aliases)
 ├── tsconfig.node.json                  TypeScript config for Vite config file
-├── package.json                        npm dependencies and scripts
+├── package.json                        npm deps + scripts (dev, build, test, wasm)
+├── eslint.config.js                    ESLint flat config (TypeScript strict)
+├── .prettierrc                         Prettier formatting rules
 ├── .gitignore
 │
 ├── src/                                ── FRONTEND (TypeScript + CSS) ──
@@ -93,22 +96,34 @@ irig106-studio/
 │                                       read_packet_data(). Currently stubs;
 │                                       swap in irig106-studio-core when ready.
 │
-├── crates/                             ── CORE RUST LIBRARY ──
-│   └── irig106-studio-core/
-│       ├── Cargo.toml                  Pure Rust, no platform deps in public API.
-│       │                               Compiles to native AND wasm32.
+├── crates/                             ── RUST CRATES ──
+│   ├── irig106-studio-core/            Core library (native + wasm32)
+│   │   ├── Cargo.toml
+│   │   ├── src/
+│   │   │   ├── lib.rs                  Crate root — re-exports public API.
+│   │   │   ├── types.rs                Domain types (Rust mirror of domain.ts).
+│   │   │   ├── error.rs                StudioError enum — all error cases.
+│   │   │   ├── io.rs                   FileBuffer trait + MmapBuffer + MemBuffer.
+│   │   │   ├── file.rs                 Ch10File — open, index, summary, read,
+│   │   │   │                           extract_tmats(), extract_time_rtcs().
+│   │   │   ├── index.rs                PacketIndex — sync scan, random access.
+│   │   │   ├── summary.rs              Ch10Summary — TMATS extraction baked in.
+│   │   │   ├── checksum.rs             8/16/32-bit checksums + header validation.
+│   │   │   ├── decode.rs               Data type decoders — stubs.
+│   │   │   ├── time.rs                 TimeCorrelator — stub.
+│   │   │   ├── tmats.rs                TmatsMetadata — stub.
+│   │   │   └── tests.rs                61 unit tests + golden file.
+│   │   └── fuzz/
+│   │       ├── Cargo.toml
+│   │       └── fuzz_targets/
+│   │           ├── fuzz_packet_index.rs   Arbitrary bytes → PacketIndex.
+│   │           └── fuzz_checksum.rs       Arbitrary bytes → checksum fns.
+│   │
+│   └── irig106-studio-wasm/            WASM bindings (ADR-008)
+│       ├── Cargo.toml
 │       └── src/
-│           ├── lib.rs                  Crate root — re-exports public API.
-│           ├── types.rs                Domain types (Rust mirror of domain.ts).
-│           ├── error.rs                StudioError enum — all error cases.
-│           ├── io.rs                   FileBuffer trait + MmapBuffer (native)
-│           │                           + MemBuffer (wasm/test).
-│           ├── file.rs                 Ch10File — open, index, summary, read.
-│           ├── index.rs                PacketIndex — scan file, build lookup table.
-│           ├── summary.rs              Ch10Summary — aggregate for frontend.
-│           ├── decode.rs               Data type decoders (1553, PCM, etc.) — stubs.
-│           ├── time.rs                 TimeCorrelator — RTC→IRIG time — stub.
-│           └── tmats.rs                TmatsMetadata — Ch9 parser wrapper — stub.
+│           └── lib.rs                  StudioSession #[wasm_bindgen] glue.
+│                                       Build: wasm-pack build --target web
 │
 ├── docs/                               ── DOCUMENTATION ──
 │   │
@@ -124,7 +139,8 @@ irig106-studio/
 │   │   ├── ADR-003-dark-theme.md       Omniverse aesthetic + light theme.
 │   │   ├── ADR-004-vanilla-typescript.md  No framework, factory-function components.
 │   │   ├── ADR-005-keyboard-shortcuts.md  Centralized keymap system.
-│   │   └── ADR-006-domain-types.md     Domain types as the contract.
+│   │   ├── ADR-006-domain-types.md     Domain types as the contract.
+│   │   └── ADR-008-wasm-architecture.md WASM deployment stack.
 │   │
 │   ├── PROJECT_STRUCTURE.md            ← YOU ARE HERE
 │   └── CONTRIBUTING.md                 Onboarding guide for new developers.
