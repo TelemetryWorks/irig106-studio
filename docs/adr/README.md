@@ -8,6 +8,7 @@
 | [004](ADR-004-vanilla-typescript.md)   | Vanilla TypeScript components         | Accepted | 2026-03-28 |
 | [005](ADR-005-keyboard-shortcuts.md)   | Centralized keyboard shortcut system  | Accepted | 2026-03-28 |
 | [006](ADR-006-domain-types.md)         | Domain type system as UI–backend contract | Accepted | 2026-03-28 |
+| [008](ADR-008-wasm-architecture.md)   | WASM deployment architecture          | Accepted | 2026-03-28 |
 
 ## Template for new ADRs
 
