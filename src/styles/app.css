@@ -517,6 +517,50 @@
   font-size: 9px;
 }
 
+/* ── Waveform multi-channel ── */
+.waveform__legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast);
+}
+.waveform__legend-item:hover {
+  background: var(--c-raised);
+}
+.waveform__legend-x {
+  font-size: 9px;
+  color: var(--c-text-disabled);
+  margin-left: 2px;
+}
+.waveform__legend-item:hover .waveform__legend-x {
+  color: var(--c-danger);
+}
+.waveform__drop-hint {
+  color: var(--c-text-disabled);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+.waveform__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.waveform--drag-over {
+  outline: 2px dashed var(--c-accent);
+  outline-offset: -2px;
+  background: var(--c-accent-subtle);
+}
+.tree-item--dragging {
+  opacity: 0.5;
+}
+
 /* ── Welcome / Empty state ── */
 .viewport-welcome {
   flex: 1;

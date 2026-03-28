@@ -132,11 +132,17 @@ function main() {
     statusbar.setStatus("ready");
 
     // Auto-select first channel
-    const firstChannel = allChannels(summary)[0];
+    const channels = allChannels(summary);
+    const firstChannel = channels[0];
     if (firstChannel) {
       selectedChannelIndex = 0;
       tree.setActiveChannel(firstChannel.channelId);
       handleChannelSelect(firstChannel);
+    }
+
+    // Auto-plot first two channels on the waveform
+    for (const ch of channels.slice(0, 2)) {
+      viewport.addPlottedChannel(ch.channelId, ch.label);
     }
   }
 
@@ -400,8 +406,8 @@ function main() {
       {
         label: "Show in waveform",
         action: () => {
+          viewport.addPlottedChannel(chId, ch?.label ?? `Ch ${chId}`);
           viewport.setActiveTab("waveform");
-          bottom.addLog({ timestamp: now(), level: "info", message: `Add Ch ${chId} to waveform (not yet implemented)` });
         },
       },
     ]);

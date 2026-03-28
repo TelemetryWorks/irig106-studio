@@ -16,6 +16,8 @@ export function createViewport(container: HTMLElement): {
   setActiveTab(tab: ViewportTab): void;
   resize(): void;
   onHexSelect(cb: (offset: number) => void): void;
+  addPlottedChannel(channelId: number, label: string): void;
+  removePlottedChannel(channelId: number): void;
 } {
   container.classList.add("panel", "viewport");
 
@@ -43,26 +45,78 @@ export function createViewport(container: HTMLElement): {
   for (let i = 0; i < hexData.length; i++) hexData[i] = (i * 7 + 13 + (i >> 3)) & 0xff;
 
   // ── Waveform state ──
-  // Total simulated time span in seconds (2 seconds of data)
   const WF_TOTAL_SEC = 2.0;
   const WF_SAMPLE_COUNT = 4000;
-  // Precompute stable demo waveform samples
-  const wfData1553 = new Float32Array(WF_SAMPLE_COUNT); // digital-ish
-  const wfDataPcm = new Float32Array(WF_SAMPLE_COUNT);  // analog-ish
-  for (let i = 0; i < WF_SAMPLE_COUNT; i++) {
-    // 1553: digital square wave with jitter
-    const phase = (i * 0.05) + Math.sin(i * 0.007) * 2;
-    wfData1553[i] = Math.sign(Math.sin(phase)) * 0.8 + (((i * 37) % 100) / 500 - 0.1);
-    // PCM: sine + noise
-    wfDataPcm[i] = Math.sin(i * 0.015) * 0.35 + Math.sin(i * 0.073) * 0.15
-      + (((i * 13 + 7) % 100) / 250 - 0.2) * 0.3;
+
+  /** A channel plotted on the waveform. */
+  interface PlottedChannel {
+    channelId: number;
+    label: string;
+    color: string;
+    data: Float32Array;
   }
 
-  let wfZoom = 1.0;        // 1.0 = fit all, >1 = zoomed in
-  let wfPanNorm = 0.5;     // 0..1 = center of visible window in normalized coords
+  /** Color palette for plotted channels (cycles if >8 channels). */
+  const WF_COLORS = [
+    "#3b8bdd", "#1d9e75", "#d4a026", "#e24b4a",
+    "#b07cd8", "#d8856e", "#6eb8d8", "#7bc378",
+  ];
+
+  const plottedChannels: PlottedChannel[] = [];
+
+  /** Generate stable demo waveform data for a given channel ID. */
+  function generateDemoData(channelId: number): Float32Array {
+    const data = new Float32Array(WF_SAMPLE_COUNT);
+    // Use channelId as a seed for deterministic, unique waveforms
+    const freq1 = 0.01 + (channelId * 0.007) % 0.04;
+    const freq2 = 0.05 + (channelId * 0.013) % 0.08;
+    const freq3 = 0.002 + (channelId * 0.003) % 0.01;
+    const amp1 = 0.3 + (channelId % 5) * 0.1;
+    const amp2 = 0.1 + (channelId % 3) * 0.08;
+    const isDigital = channelId % 3 === 0;
+
+    for (let i = 0; i < WF_SAMPLE_COUNT; i++) {
+      if (isDigital) {
+        const phase = i * freq2 + Math.sin(i * freq3) * 2;
+        data[i] = Math.sign(Math.sin(phase)) * amp1
+          + (((i * (channelId + 37)) % 100) / 500 - 0.1);
+      } else {
+        data[i] = Math.sin(i * freq1) * amp1
+          + Math.sin(i * freq2) * amp2
+          + (((i * (channelId + 13)) % 100) / 250 - 0.2) * 0.2;
+      }
+    }
+    return data;
+  }
+
+  function addPlottedChannel(channelId: number, label: string) {
+    // Don't add duplicates
+    if (plottedChannels.some((p) => p.channelId === channelId)) return;
+
+    const colorIdx = plottedChannels.length % WF_COLORS.length;
+    plottedChannels.push({
+      channelId,
+      label,
+      color: WF_COLORS[colorIdx],
+      data: generateDemoData(channelId),
+    });
+
+    // Re-render if waveform tab is active
+    if (activeTab === "waveform") renderWaveform();
+  }
+
+  function removePlottedChannel(channelId: number) {
+    const idx = plottedChannels.findIndex((p) => p.channelId === channelId);
+    if (idx < 0) return;
+    plottedChannels.splice(idx, 1);
+    if (activeTab === "waveform") renderWaveform();
+  }
+
+  let wfZoom = 1.0;
+  let wfPanNorm = 0.5;
   const WF_ZOOM_MIN = 1.0;
   const WF_ZOOM_MAX = 32.0;
-  const WF_BASE_TIME = 14 * 3600 + 23 * 60 + 44; // 14:23:44 in seconds
+  const WF_BASE_TIME = 14 * 3600 + 23 * 60 + 44;
 
   // Tab click handling
   tabBar.addEventListener("click", (e) => {
@@ -125,35 +179,98 @@ export function createViewport(container: HTMLElement): {
   }
 
   function renderWaveform() {
+    // Build dynamic legend
+    const legendItems = plottedChannels.map((pc) =>
+      `<span class="waveform__legend-item" data-remove-ch="${pc.channelId}" title="Click to remove">` +
+      `<span class="waveform__legend-swatch" style="background:${pc.color}"></span>` +
+      `Ch${pc.channelId} ${escHtml(pc.label)}` +
+      `<span class="waveform__legend-x">✕</span>` +
+      `</span>`
+    ).join("");
+
+    const emptyHint = plottedChannels.length === 0
+      ? `<span class="waveform__drop-hint">Drag channels here to plot</span>`
+      : "";
+
     content.innerHTML = `
-      <div class="waveform">
+      <div class="waveform" id="wf-drop-zone">
         <canvas id="waveform-canvas" class="waveform__canvas"></canvas>
+        ${plottedChannels.length === 0 ? `
+          <div class="waveform__empty">
+            <div style="color:var(--c-text-tertiary);font-size:12px;margin-bottom:4px">No channels plotted</div>
+            <div style="color:var(--c-text-disabled);font-size:11px">Drag a channel from the sidebar onto this area</div>
+          </div>
+        ` : ""}
         <div class="waveform__timescale" id="wf-timescale"></div>
         <div class="waveform__legend">
-          <span><span class="waveform__legend-swatch" style="background:var(--c-waveform-1553)"></span>Ch1 1553 Bus A</span>
-          <span><span class="waveform__legend-swatch" style="background:var(--c-waveform-pcm)"></span>Ch3 PCM</span>
+          ${legendItems}${emptyHint}
           <span class="waveform__zoom-hint">Scroll to zoom · drag to pan</span>
         </div>
       </div>
     `;
 
     const canvas = content.querySelector("#waveform-canvas") as HTMLCanvasElement;
-    if (!canvas) return;
+    const dropZone = content.querySelector("#wf-drop-zone") as HTMLElement;
+    if (!canvas || !dropZone) return;
 
+    // ── Drop zone for channels ──
+    let dropCounter = 0;
+
+    dropZone.addEventListener("dragenter", (e) => {
+      e.preventDefault();
+      dropCounter++;
+      if (dropCounter === 1) dropZone.classList.add("waveform--drag-over");
+    });
+
+    dropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropCounter--;
+      if (dropCounter <= 0) {
+        dropCounter = 0;
+        dropZone.classList.remove("waveform--drag-over");
+      }
+    });
+
+    dropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropCounter = 0;
+      dropZone.classList.remove("waveform--drag-over");
+
+      const data = e.dataTransfer?.getData("application/x-irig106-channel");
+      if (!data) return;
+      try {
+        const ch = JSON.parse(data);
+        if (ch && typeof ch.channelId === "number") {
+          addPlottedChannel(ch.channelId, ch.label || `Ch ${ch.channelId}`);
+        }
+      } catch { /* ignore bad data */ }
+    });
+
+    // ── Legend click-to-remove ──
+    content.querySelectorAll("[data-remove-ch]").forEach((el) => {
+      el.addEventListener("click", () => {
+        const chId = parseInt((el as HTMLElement).dataset.removeCh!, 10);
+        removePlottedChannel(chId);
+      });
+    });
+
+    // ── Zoom/pan handlers ──
     let isPanning = false;
     let panStartX = 0;
     let panStartNorm = 0;
 
-    // Mouse wheel → zoom
     canvas.addEventListener("wheel", (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
       const oldZoom = wfZoom;
       wfZoom = Math.max(WF_ZOOM_MIN, Math.min(WF_ZOOM_MAX, wfZoom * zoomFactor));
 
-      // Zoom toward mouse position
       const rect = canvas.getBoundingClientRect();
-      const mouseNormX = (e.clientX - rect.left) / rect.width; // 0..1
+      const mouseNormX = (e.clientX - rect.left) / rect.width;
       const visibleFrac = 1 / wfZoom;
       const oldLeft = wfPanNorm - (1 / oldZoom) / 2;
       const mouseDataNorm = oldLeft + mouseNormX * (1 / oldZoom);
@@ -163,7 +280,6 @@ export function createViewport(container: HTMLElement): {
       drawWaveform(canvas);
     }, { passive: false });
 
-    // Click-drag → pan
     canvas.addEventListener("mousedown", (e) => {
       if (wfZoom <= WF_ZOOM_MIN) return;
       isPanning = true;
@@ -189,9 +305,7 @@ export function createViewport(container: HTMLElement): {
       }
     });
 
-    // Set initial cursor
     canvas.style.cursor = wfZoom > WF_ZOOM_MIN ? "grab" : "default";
-
     requestAnimationFrame(() => drawWaveform(canvas));
   }
 
@@ -242,8 +356,6 @@ export function createViewport(container: HTMLElement): {
     const bgColor = cv("--c-surface", "#222226");
     const gridH = cv("--c-waveform-grid", "rgba(255,255,255,0.05)");
     const gridV = cv("--c-waveform-grid-v", "rgba(255,255,255,0.04)");
-    const c1553 = cv("--c-waveform-1553", "#3b8bdd");
-    const cPcm = cv("--c-waveform-pcm", "#1d9e75");
     const cPlay = cv("--c-playhead", "#e24b4a");
 
     // Background
@@ -273,30 +385,21 @@ export function createViewport(container: HTMLElement): {
     const mid = ch / 2;
     const amp = ch * 0.35;
 
-    // Draw 1553 signal
-    ctx.strokeStyle = c1553;
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let px = 0; px < cw; px++) {
-      const sampleIdx = startSample + (px / cw) * visibleSamples;
-      const idx = Math.min(WF_SAMPLE_COUNT - 1, Math.max(0, Math.round(sampleIdx)));
-      const y = mid - wfData1553[idx] * amp;
-      if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+    // Draw each plotted channel
+    for (let ci = 0; ci < plottedChannels.length; ci++) {
+      const pc = plottedChannels[ci];
+      ctx.strokeStyle = pc.color;
+      ctx.lineWidth = ci === 0 ? 1.5 : 1;
+      ctx.globalAlpha = ci === 0 ? 1.0 : 0.75;
+      ctx.beginPath();
+      for (let px = 0; px < cw; px++) {
+        const sampleIdx = startSample + (px / cw) * visibleSamples;
+        const idx = Math.min(WF_SAMPLE_COUNT - 1, Math.max(0, Math.round(sampleIdx)));
+        const y = mid - pc.data[idx] * amp;
+        if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
-
-    // Draw PCM signal
-    ctx.strokeStyle = cPcm;
-    ctx.lineWidth = 1;
-    ctx.globalAlpha = 0.7;
-    ctx.beginPath();
-    for (let px = 0; px < cw; px++) {
-      const sampleIdx = startSample + (px / cw) * visibleSamples;
-      const idx = Math.min(WF_SAMPLE_COUNT - 1, Math.max(0, Math.round(sampleIdx)));
-      const y = mid - wfDataPcm[idx] * amp;
-      if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
-    }
-    ctx.stroke();
     ctx.globalAlpha = 1.0;
 
     // Playhead at center of visible window
@@ -507,6 +610,8 @@ export function createViewport(container: HTMLElement): {
     setActiveTab,
     resize,
     onHexSelect(cb: (offset: number) => void) { hexSelectCb = cb; },
+    addPlottedChannel,
+    removePlottedChannel,
   };
 }
 

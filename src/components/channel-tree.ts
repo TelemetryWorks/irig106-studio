@@ -158,7 +158,7 @@ export function createChannelTree(
       const active = ch.channelId === activeChannelId ? " tree-item--active" : "";
       lines.push(`
         <div class="tree-indent">
-          <div class="tree-item${active}" data-channel-id="${ch.channelId}">
+          <div class="tree-item${active}" data-channel-id="${ch.channelId}" draggable="true">
             <span class="tree-icon" style="color:var(--c-dt-${badge.label.toLowerCase().replace(/\s/g, "")}, var(--c-info))">●</span>
             Ch ${ch.channelId}
             <span class="badge ${badge.css}">${badge.label}</span>
@@ -203,6 +203,25 @@ export function createChannelTree(
         setActiveChannel(id);
         callbacks.onChannelSelect(ch);
       }
+    });
+
+    // Drag channels to the waveform
+    body.addEventListener("dragstart", (e) => {
+      const item = (e.target as HTMLElement).closest("[data-channel-id]") as HTMLElement | null;
+      if (!item || !e.dataTransfer) return;
+
+      const id = parseInt(item.dataset.channelId!, 10);
+      const ch = findChannel(summary, id);
+      if (!ch) return;
+
+      e.dataTransfer.effectAllowed = "copy";
+      e.dataTransfer.setData("application/x-irig106-channel", JSON.stringify(ch));
+      item.classList.add("tree-item--dragging");
+    });
+
+    body.addEventListener("dragend", (e) => {
+      const item = (e.target as HTMLElement).closest("[data-channel-id]");
+      item?.classList.remove("tree-item--dragging");
     });
   }
 
