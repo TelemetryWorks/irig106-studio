@@ -9,7 +9,11 @@
  * Other views are HTML-based.
  */
 
-import type { Ch10Summary, ViewportTab } from "@/types/domain";
+import type { Ch10Summary, ViewportTab, PacketHeader } from "@/types/domain";
+import { dataTypeBadge } from "@/types/domain";
+
+/** Callback to fetch packet headers for virtual scrolling. */
+export type PacketFetcher = (startIndex: number, count: number) => Promise<PacketHeader[]>;
 
 export function createViewport(container: HTMLElement): {
   setSummary(summary: Ch10Summary): void;
@@ -18,20 +22,22 @@ export function createViewport(container: HTMLElement): {
   onHexSelect(cb: (offset: number) => void): void;
   addPlottedChannel(channelId: number, label: string): void;
   removePlottedChannel(channelId: number): void;
+  setPacketFetcher(fetcher: PacketFetcher): void;
 } {
   container.classList.add("panel", "viewport");
 
   const tabs: ViewportTab[] = ["waveform", "hex", "packets", "tmats"];
 
   container.innerHTML = `
-    <div class="tab-bar" id="viewport-tabs">
+    <div class="tab-bar" id="viewport-tabs" role="tablist" aria-label="Viewport tabs">
       ${tabs.map((t) => `
-        <span class="tab-bar__tab${t === "waveform" ? " tab-bar__tab--active" : ""}" data-tab="${t}">
+        <span class="tab-bar__tab${t === "waveform" ? " tab-bar__tab--active" : ""}" data-tab="${t}"
+              role="tab" aria-selected="${t === "waveform" ? "true" : "false"}" tabindex="${t === "waveform" ? "0" : "-1"}">
           ${tabLabel(t)}
         </span>
       `).join("")}
     </div>
-    <div id="viewport-content" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden"></div>
+    <div id="viewport-content" role="tabpanel" aria-label="Viewport content" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden"></div>
   `;
 
   const tabBar = container.querySelector("#viewport-tabs") as HTMLElement;
@@ -40,6 +46,7 @@ export function createViewport(container: HTMLElement): {
   let summary: Ch10Summary | null = null;
   let hexSelectCb: ((offset: number) => void) | null = null;
   let hexSelectedOffset = -1;
+  let packetFetcher: PacketFetcher | null = null;
   // Stable demo data so hex view doesn't regenerate on re-render
   const hexData = new Uint8Array(512);
   for (let i = 0; i < hexData.length; i++) hexData[i] = (i * 7 + 13 + (i >> 3)) & 0xff;
@@ -128,7 +135,10 @@ export function createViewport(container: HTMLElement): {
   function setActiveTab(tab: ViewportTab) {
     activeTab = tab;
     tabBar.querySelectorAll(".tab-bar__tab").forEach((el) => {
-      el.classList.toggle("tab-bar__tab--active", (el as HTMLElement).dataset.tab === tab);
+      const isActive = (el as HTMLElement).dataset.tab === tab;
+      el.classList.toggle("tab-bar__tab--active", isActive);
+      el.setAttribute("aria-selected", isActive ? "true" : "false");
+      el.setAttribute("tabindex", isActive ? "0" : "-1");
     });
     renderContent();
   }
@@ -526,43 +536,150 @@ export function createViewport(container: HTMLElement): {
     hexSelectCb?.(offset);
   }
 
-  function renderPackets() {
-    const headerRow = `<tr style="position:sticky;top:0;background:var(--c-raised);z-index:1">
-      <th style="text-align:left;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">Index</th>
-      <th style="text-align:left;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">Offset</th>
-      <th style="text-align:left;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">Ch</th>
-      <th style="text-align:left;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">Type</th>
-      <th style="text-align:right;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">Length</th>
-      <th style="text-align:left;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">Seq</th>
-      <th style="text-align:left;padding:4px 8px;color:var(--c-text-tertiary);font-weight:500">CRC</th>
-    </tr>`;
+  // ── Packet virtual scroll state ──
+  const PKT_ROW_H = 24;       // px per row
+  const PKT_HEADER_H = 28;    // sticky header height
+  const PKT_BUFFER = 10;      // extra rows above/below viewport
+  const PKT_BATCH = 100;      // fetch this many at a time
+  let pktCache: { start: number; headers: PacketHeader[] } = { start: 0, headers: [] };
+  let pktScrollRAF = 0;
+  let pktSelectedIndex = -1;
 
+  function renderPackets() {
+    const totalPackets = summary?.file.packetCount ?? 0;
+
+    content.innerHTML = `
+      <div class="pkt-table" id="pkt-scroll-container">
+        <div class="pkt-table__header">
+          <span class="pkt-col pkt-col--idx">Index</span>
+          <span class="pkt-col pkt-col--offset">Offset</span>
+          <span class="pkt-col pkt-col--ch">Ch</span>
+          <span class="pkt-col pkt-col--type">Type</span>
+          <span class="pkt-col pkt-col--len">Length</span>
+          <span class="pkt-col pkt-col--seq">Seq</span>
+          <span class="pkt-col pkt-col--crc">CRC</span>
+        </div>
+        <div class="pkt-table__body" id="pkt-body">
+          <div class="pkt-table__spacer" id="pkt-spacer"></div>
+          <div class="pkt-table__viewport" id="pkt-viewport"></div>
+        </div>
+        <div class="pkt-table__status" id="pkt-status">
+          ${totalPackets > 0 ? `${totalPackets.toLocaleString()} packets` : "No packets"}
+        </div>
+      </div>
+    `;
+
+    if (totalPackets === 0) return;
+
+    const bodyEl = content.querySelector("#pkt-body") as HTMLElement;
+    const spacerEl = content.querySelector("#pkt-spacer") as HTMLElement;
+    const viewportEl = content.querySelector("#pkt-viewport") as HTMLElement;
+    const statusEl = content.querySelector("#pkt-status") as HTMLElement;
+
+    // Set spacer height to create full scrollbar range
+    spacerEl.style.height = `${totalPackets * PKT_ROW_H}px`;
+
+    // Scroll handler — debounced via rAF
+    bodyEl.addEventListener("scroll", () => {
+      if (pktScrollRAF) return;
+      pktScrollRAF = requestAnimationFrame(() => {
+        pktScrollRAF = 0;
+        updatePacketView(bodyEl, viewportEl, statusEl, totalPackets);
+      });
+    });
+
+    // Click to select a row
+    viewportEl.addEventListener("click", (e) => {
+      const row = (e.target as HTMLElement).closest("[data-pkt-idx]") as HTMLElement | null;
+      if (!row) return;
+      pktSelectedIndex = parseInt(row.dataset.pktIdx!, 10);
+      viewportEl.querySelectorAll(".pkt-row--selected").forEach((r) =>
+        r.classList.remove("pkt-row--selected")
+      );
+      row.classList.add("pkt-row--selected");
+    });
+
+    // Initial render
+    updatePacketView(bodyEl, viewportEl, statusEl, totalPackets);
+  }
+
+  async function updatePacketView(
+    bodyEl: HTMLElement,
+    viewportEl: HTMLElement,
+    statusEl: HTMLElement,
+    totalPackets: number
+  ) {
+    const scrollTop = bodyEl.scrollTop;
+    const viewHeight = bodyEl.clientHeight - PKT_HEADER_H;
+
+    const firstVisible = Math.max(0, Math.floor(scrollTop / PKT_ROW_H) - PKT_BUFFER);
+    const visibleCount = Math.ceil(viewHeight / PKT_ROW_H) + PKT_BUFFER * 2;
+    const lastVisible = Math.min(totalPackets - 1, firstVisible + visibleCount);
+    const count = lastVisible - firstVisible + 1;
+
+    // Check if we need to fetch new data
+    const cacheEnd = pktCache.start + pktCache.headers.length;
+    const needsFetch = firstVisible < pktCache.start || lastVisible >= cacheEnd;
+
+    if (needsFetch && packetFetcher) {
+      // Fetch a larger batch centered on the visible range for smooth scrolling
+      const fetchStart = Math.max(0, firstVisible - PKT_BATCH);
+      const fetchCount = Math.min(count + PKT_BATCH * 2, totalPackets - fetchStart);
+      try {
+        const headers = await packetFetcher(fetchStart, fetchCount);
+        pktCache = { start: fetchStart, headers };
+      } catch {
+        // Fetch failed — render what we have
+      }
+    }
+
+    // Build visible rows from cache
     const rows: string[] = [];
     const types = ["1553", "1553", "PCM", "Time", "Video"];
     const badges = ["badge--1553", "badge--1553", "badge--pcm", "badge--time", "badge--video"];
 
-    for (let i = 0; i < 100; i++) {
-      const t = i % 5;
-      const crcOk = i % 47 !== 0;
-      rows.push(`<tr style="border-bottom:1px solid var(--c-border-subtle);cursor:pointer" onmouseover="this.style.background='var(--c-raised)'" onmouseout="this.style.background='transparent'">
-        <td style="padding:2px 8px;font-family:var(--font-mono);font-size:10px;color:var(--c-text-tertiary)">${i}</td>
-        <td style="padding:2px 8px;font-family:var(--font-mono);font-size:10px">0x${(i * 384).toString(16).toUpperCase().padStart(6, "0")}</td>
-        <td style="padding:2px 8px;font-size:11px">${(t + 1)}</td>
-        <td style="padding:2px 8px"><span class="badge ${badges[t]}">${types[t]}</span></td>
-        <td style="padding:2px 8px;text-align:right;font-family:var(--font-mono);font-size:10px">${64 + (i % 192)}</td>
-        <td style="padding:2px 8px;font-family:var(--font-mono);font-size:10px">${i % 256}</td>
-        <td style="padding:2px 8px;font-size:10px;color:${crcOk ? "var(--c-success)" : "var(--c-danger)"}">${crcOk ? "✓" : "✗"}</td>
-      </tr>`);
+    for (let i = firstVisible; i <= lastVisible; i++) {
+      const cacheIdx = i - pktCache.start;
+      const selected = i === pktSelectedIndex ? " pkt-row--selected" : "";
+
+      if (cacheIdx >= 0 && cacheIdx < pktCache.headers.length) {
+        // Render from real cached data
+        const h = pktCache.headers[cacheIdx];
+        const badge = dataTypeBadge(h.dataType);
+        rows.push(
+          `<div class="pkt-row${selected}" data-pkt-idx="${i}" style="top:${i * PKT_ROW_H}px">` +
+          `<span class="pkt-col pkt-col--idx">${i.toLocaleString()}</span>` +
+          `<span class="pkt-col pkt-col--offset">0x${h.fileOffset.toString(16).toUpperCase().padStart(8, "0")}</span>` +
+          `<span class="pkt-col pkt-col--ch">${h.channelId}</span>` +
+          `<span class="pkt-col pkt-col--type"><span class="badge ${badge.css}">${badge.label}</span></span>` +
+          `<span class="pkt-col pkt-col--len">${h.dataLength}</span>` +
+          `<span class="pkt-col pkt-col--seq">${h.sequenceNumber}</span>` +
+          `<span class="pkt-col pkt-col--crc" style="color:${h.checksumValid ? "var(--c-success)" : "var(--c-danger)"}">${h.checksumValid ? "✓" : "✗"}</span>` +
+          `</div>`
+        );
+      } else {
+        // Fallback: synthetic data when cache doesn't cover this row
+        const t = i % 5;
+        const crcOk = i % 47 !== 0;
+        rows.push(
+          `<div class="pkt-row${selected}" data-pkt-idx="${i}" style="top:${i * PKT_ROW_H}px">` +
+          `<span class="pkt-col pkt-col--idx">${i.toLocaleString()}</span>` +
+          `<span class="pkt-col pkt-col--offset">0x${(i * 384).toString(16).toUpperCase().padStart(8, "0")}</span>` +
+          `<span class="pkt-col pkt-col--ch">${(t + 1)}</span>` +
+          `<span class="pkt-col pkt-col--type"><span class="badge ${badges[t]}">${types[t]}</span></span>` +
+          `<span class="pkt-col pkt-col--len">${64 + (i % 192)}</span>` +
+          `<span class="pkt-col pkt-col--seq">${i % 256}</span>` +
+          `<span class="pkt-col pkt-col--crc" style="color:${crcOk ? "var(--c-success)" : "var(--c-danger)"}">${crcOk ? "✓" : "✗"}</span>` +
+          `</div>`
+        );
+      }
     }
 
-    content.innerHTML = `
-      <div style="flex:1;overflow:auto">
-        <table style="width:100%;border-collapse:collapse;font-size:11px">
-          ${headerRow}
-          ${rows.join("")}
-        </table>
-      </div>
-    `;
+    viewportEl.innerHTML = rows.join("");
+
+    // Update status with scroll position
+    const pct = totalPackets > 0 ? Math.round((firstVisible / totalPackets) * 100) : 0;
+    statusEl.textContent = `${totalPackets.toLocaleString()} packets · showing ${firstVisible.toLocaleString()}–${lastVisible.toLocaleString()} (${pct}%)`;
   }
 
   function renderTmats() {
@@ -612,6 +729,7 @@ export function createViewport(container: HTMLElement): {
     onHexSelect(cb: (offset: number) => void) { hexSelectCb = cb; },
     addPlottedChannel,
     removePlottedChannel,
+    setPacketFetcher(fetcher: PacketFetcher) { packetFetcher = fetcher; },
   };
 }
 

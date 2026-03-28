@@ -10,6 +10,8 @@ export function createStatusBar(container: HTMLElement): {
   setCursorOffset(offset: number | null): void;
 } {
   container.classList.add("statusbar", "no-select");
+  container.setAttribute("role", "status");
+  container.setAttribute("aria-label", "Application status");
 
   container.innerHTML = `
     <span id="status-indicator"><span class="statusbar__dot" id="status-dot"></span><span id="status-text">Ready</span></span>

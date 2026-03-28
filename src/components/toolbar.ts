@@ -21,27 +21,29 @@ export function createToolbar(container: HTMLElement): {
   let themeToggleCb: (() => void) | null = null;
 
   container.classList.add("toolbar", "no-select");
+  container.setAttribute("role", "toolbar");
+  container.setAttribute("aria-label", "Main toolbar");
   container.innerHTML = `
     <span class="toolbar__brand">IRIG106-Studio</span>
-    <span class="toolbar__menu-item" data-action="open">File</span>
-    <span class="toolbar__menu-item">View</span>
-    <span class="toolbar__menu-item">Tools</span>
-    <span class="toolbar__sep"></span>
-    <div class="toolbar__transport">
-      <button class="toolbar__transport-btn" title="First packet">⏮</button>
-      <button class="toolbar__transport-btn" title="Step back">⏪</button>
-      <button class="toolbar__transport-btn toolbar__transport-btn--play" title="Play">▶</button>
-      <button class="toolbar__transport-btn" title="Step forward">⏩</button>
-      <button class="toolbar__transport-btn" title="Last packet">⏭</button>
+    <button class="toolbar__menu-item" data-action="open" aria-label="Open file (Ctrl+O)">File</button>
+    <button class="toolbar__menu-item" aria-label="View options">View</button>
+    <button class="toolbar__menu-item" aria-label="Tools">Tools</button>
+    <span class="toolbar__sep" aria-hidden="true"></span>
+    <div class="toolbar__transport" role="group" aria-label="Transport controls">
+      <button class="toolbar__transport-btn" title="First packet (Home)" aria-label="First packet">⏮</button>
+      <button class="toolbar__transport-btn" title="Step back (←)" aria-label="Step back">⏪</button>
+      <button class="toolbar__transport-btn toolbar__transport-btn--play" title="Play (Space)" aria-label="Play or pause">▶</button>
+      <button class="toolbar__transport-btn" title="Step forward (→)" aria-label="Step forward">⏩</button>
+      <button class="toolbar__transport-btn" title="Last packet (End)" aria-label="Last packet">⏭</button>
     </div>
-    <span class="toolbar__sep"></span>
-    <span class="toolbar__time" id="toolbar-time">---:--:--:--.------</span>
+    <span class="toolbar__sep" aria-hidden="true"></span>
+    <span class="toolbar__time" id="toolbar-time" role="status" aria-label="Current IRIG time">---:--:--:--.------</span>
     <span class="toolbar__spacer"></span>
-    <button class="toolbar__theme-toggle" id="theme-toggle" title="Toggle theme (Ctrl+Shift+T)">
-      <span id="theme-icon">◐</span>
+    <button class="toolbar__theme-toggle" id="theme-toggle" title="Toggle theme (Ctrl+Shift+T)" aria-label="Toggle dark and light theme">
+      <span id="theme-icon" aria-hidden="true">◐</span>
     </button>
-    <span class="toolbar__sep"></span>
-    <span class="toolbar__version" id="toolbar-version">---</span>
+    <span class="toolbar__sep" aria-hidden="true"></span>
+    <span class="toolbar__version" id="toolbar-version" aria-label="IRIG standard version">---</span>
   `;
 
   const timeEl = container.querySelector("#toolbar-time") as HTMLElement;

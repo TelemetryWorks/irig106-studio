@@ -13,15 +13,16 @@ export function createBottomPanel(container: HTMLElement): {
   const tabs: BottomTab[] = ["console", "statistics", "time-correlation", "errors"];
 
   container.innerHTML = `
-    <div class="resize-handle resize-handle--row top"></div>
-    <div class="tab-bar" id="bottom-tabs">
+    <div class="resize-handle resize-handle--row top" aria-hidden="true"></div>
+    <div class="tab-bar" id="bottom-tabs" role="tablist" aria-label="Bottom panel tabs">
       ${tabs.map((t) => `
-        <span class="tab-bar__tab${t === "console" ? " tab-bar__tab--active" : ""}" data-tab="${t}">
+        <span class="tab-bar__tab${t === "console" ? " tab-bar__tab--active" : ""}" data-tab="${t}"
+              role="tab" aria-selected="${t === "console" ? "true" : "false"}" tabindex="${t === "console" ? "0" : "-1"}">
           ${tabLabel(t)}
         </span>
       `).join("")}
     </div>
-    <div class="panel__body" id="bottom-body" style="padding:4px 2px"></div>
+    <div class="panel__body" id="bottom-body" role="tabpanel" aria-label="Bottom panel content" style="padding:4px 2px"></div>
   `;
 
   const tabBar = container.querySelector("#bottom-tabs") as HTMLElement;
@@ -38,7 +39,10 @@ export function createBottomPanel(container: HTMLElement): {
   function setActiveTab(tab: BottomTab) {
     activeTab = tab;
     tabBar.querySelectorAll(".tab-bar__tab").forEach((el) => {
-      el.classList.toggle("tab-bar__tab--active", (el as HTMLElement).dataset.tab === tab);
+      const isActive = (el as HTMLElement).dataset.tab === tab;
+      el.classList.toggle("tab-bar__tab--active", isActive);
+      el.setAttribute("aria-selected", isActive ? "true" : "false");
+      el.setAttribute("tabindex", isActive ? "0" : "-1");
     });
     renderContent();
   }

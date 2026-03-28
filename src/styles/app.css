@@ -50,10 +50,13 @@
 }
 
 .toolbar__menu-item {
+  font-family: var(--font-ui);
   font-size: var(--fs-sm);
   color: var(--c-text-secondary);
   padding: var(--sp-1) var(--sp-4);
   border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
   cursor: pointer;
   transition: background var(--t-fast), color var(--t-fast);
 }
@@ -603,6 +606,118 @@
   border: 1px solid var(--c-border-default);
   border-radius: var(--r-sm);
   padding: 1px 5px;
+}
+
+/* ── Packet table (virtual scroll) ── */
+.pkt-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-size: var(--fs-sm);
+}
+.pkt-table__header {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  min-height: 28px;
+  background: var(--c-raised);
+  border-bottom: 1px solid var(--c-border-subtle);
+  font-weight: 500;
+  color: var(--c-text-tertiary);
+  user-select: none;
+  padding: 0 4px;
+}
+.pkt-table__body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  position: relative;
+}
+.pkt-table__spacer {
+  /* Height set dynamically by JS to create the full scrollbar range */
+  width: 1px;
+  pointer-events: none;
+}
+.pkt-table__viewport {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.pkt-table__status {
+  height: 20px;
+  min-height: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--sp-4);
+  font-size: var(--fs-xs);
+  color: var(--c-text-tertiary);
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-border-subtle);
+}
+.pkt-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--c-border-subtle);
+  transition: background var(--t-fast);
+}
+.pkt-row:hover {
+  background: var(--c-raised);
+}
+.pkt-row--selected {
+  background: var(--c-accent-subtle);
+}
+.pkt-row--selected:hover {
+  background: var(--c-accent-subtle);
+}
+.pkt-col {
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px;
+}
+.pkt-col--idx {
+  width: 70px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--c-text-tertiary);
+}
+.pkt-col--offset {
+  width: 100px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.pkt-col--ch {
+  width: 36px;
+  text-align: center;
+}
+.pkt-col--type {
+  width: 72px;
+}
+.pkt-col--len {
+  width: 60px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.pkt-col--seq {
+  width: 40px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+}
+.pkt-col--crc {
+  width: 36px;
+  text-align: center;
+  font-size: var(--fs-xs);
 }
 
 /* ── TMATS syntax highlighting ── */

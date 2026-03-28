@@ -38,8 +38,8 @@ export function createChannelTree(
 
   container.innerHTML = `
     <div class="panel__header">
-      <span class="panel__title">Channels</span>
-      <span class="panel__action" id="filter-toggle" title="Filter channels (/)">⌕</span>
+      <span class="panel__title" id="channels-title">Channels</span>
+      <button class="panel__action" id="filter-toggle" title="Filter channels (/)" aria-label="Filter channels">⌕</button>
     </div>
     <div class="tree-filter" id="tree-filter" style="display:none">
       <input
@@ -49,15 +49,16 @@ export function createChannelTree(
         placeholder="Filter channels..."
         autocomplete="off"
         spellcheck="false"
+        aria-label="Filter channels by name, ID, or type"
       />
     </div>
-    <div class="panel__body" id="channel-tree-body">
+    <div class="panel__body" id="channel-tree-body" role="tree" aria-labelledby="channels-title">
       <div style="padding:16px 8px;color:var(--c-text-tertiary);font-size:11px;text-align:center;line-height:1.6">
         No file loaded<br>
         <span style="font-size:10px">Open a Ch10 file to browse channels</span>
       </div>
     </div>
-    <div class="resize-handle resize-handle--col right"></div>
+    <div class="resize-handle resize-handle--col right" aria-hidden="true"></div>
   `;
 
   const body = container.querySelector("#channel-tree-body") as HTMLElement;
@@ -156,10 +157,12 @@ export function createChannelTree(
     for (const ch of channelsToRender) {
       const badge = dataTypeBadge(ch.dataType);
       const active = ch.channelId === activeChannelId ? " tree-item--active" : "";
+      const selected = ch.channelId === activeChannelId ? "true" : "false";
       lines.push(`
         <div class="tree-indent">
-          <div class="tree-item${active}" data-channel-id="${ch.channelId}" draggable="true">
-            <span class="tree-icon" style="color:var(--c-dt-${badge.label.toLowerCase().replace(/\s/g, "")}, var(--c-info))">●</span>
+          <div class="tree-item${active}" data-channel-id="${ch.channelId}" draggable="true"
+               role="treeitem" aria-selected="${selected}" aria-label="Channel ${ch.channelId}, ${escHtml(ch.label)}, ${badge.label}">
+            <span class="tree-icon" style="color:var(--c-dt-${badge.label.toLowerCase().replace(/\s/g, "")}, var(--c-info))" aria-hidden="true">●</span>
             Ch ${ch.channelId}
             <span class="badge ${badge.css}">${badge.label}</span>
             <span class="tree-label">${escHtml(ch.label)}</span>

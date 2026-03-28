@@ -35,3 +35,24 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--c-border-primary);
 }
+
+/* ── Focus rings for keyboard accessibility ── */
+:focus-visible {
+  outline: 2px solid var(--c-accent);
+  outline-offset: 1px;
+}
+
+/* Suppress focus ring for mouse clicks */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Tab-bar tabs need inline outline */
+.tab-bar__tab:focus-visible {
+  outline-offset: -2px;
+}
+
+/* Tree items need inline outline */
+.tree-item:focus-visible {
+  outline-offset: -1px;
+}

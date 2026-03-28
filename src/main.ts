@@ -90,6 +90,9 @@ function main() {
     statusbar.setCursorOffset(offset);
   });
 
+  // ── Packet table → platform adapter wiring ──
+  viewport.setPacketFetcher((start, count) => platform.readPacketHeaders(start, count));
+
   function doToggleTheme() {
     const newTheme = toggleTheme();
     toolbar.setThemeIcon(newTheme);

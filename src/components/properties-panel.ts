@@ -14,11 +14,11 @@ export function createPropertiesPanel(container: HTMLElement): {
   container.classList.add("panel", "props-panel");
 
   container.innerHTML = `
-    <div class="resize-handle resize-handle--col left"></div>
+    <div class="resize-handle resize-handle--col left" aria-hidden="true"></div>
     <div class="panel__header">
       <span class="panel__title">Properties</span>
     </div>
-    <div class="panel__body" id="props-body">
+    <div class="panel__body" id="props-body" role="region" aria-label="Channel and packet properties">
       <div style="padding:16px;color:var(--c-text-tertiary);font-size:11px;text-align:center">
         Open a file to view properties
       </div>
