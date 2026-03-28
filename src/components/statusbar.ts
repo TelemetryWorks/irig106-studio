@@ -7,6 +7,7 @@ import type { Ch10FileInfo } from "@/types/domain";
 export function createStatusBar(container: HTMLElement): {
   setFileInfo(info: Ch10FileInfo): void;
   setStatus(status: "ready" | "loading" | "error", message?: string): void;
+  setCursorOffset(offset: number | null): void;
 } {
   container.classList.add("statusbar", "no-select");
 
@@ -15,6 +16,7 @@ export function createStatusBar(container: HTMLElement): {
     <span id="status-packets">—</span>
     <span id="status-duration">—</span>
     <span id="status-filesize">—</span>
+    <span id="status-cursor" style="font-family:var(--font-mono)"></span>
     <span class="statusbar__spacer"></span>
     <span id="status-version">—</span>
   `;
@@ -24,6 +26,7 @@ export function createStatusBar(container: HTMLElement): {
   const packetsEl = container.querySelector("#status-packets") as HTMLElement;
   const durationEl = container.querySelector("#status-duration") as HTMLElement;
   const fileSizeEl = container.querySelector("#status-filesize") as HTMLElement;
+  const cursorEl = container.querySelector("#status-cursor") as HTMLElement;
   const versionEl = container.querySelector("#status-version") as HTMLElement;
 
   function setFileInfo(info: Ch10FileInfo) {
@@ -43,7 +46,15 @@ export function createStatusBar(container: HTMLElement): {
     textEl.textContent = message || capitalize(status);
   }
 
-  return { setFileInfo, setStatus };
+  function setCursorOffset(offset: number | null) {
+    if (offset === null || offset < 0) {
+      cursorEl.textContent = "";
+    } else {
+      cursorEl.textContent = `Offset: 0x${offset.toString(16).toUpperCase().padStart(4, "0")} (${offset})`;
+    }
+  }
+
+  return { setFileInfo, setStatus, setCursorOffset };
 }
 
 function formatDuration(totalSec: number): string {

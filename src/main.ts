@@ -34,6 +34,9 @@ import { initKeyboardShortcuts } from "@/components/keyboard-shortcuts";
 import { initDragDrop } from "@/components/drag-drop";
 import { toggleShortcutsOverlay } from "@/components/shortcuts-overlay";
 import { initTheme, toggleTheme } from "@/components/theme-switcher";
+import { loadLayout, saveLayout } from "@/components/layout-persistence";
+import { createContextMenu } from "@/components/context-menu";
+import type { LayoutState } from "@/components/layout-persistence";
 import { formatIrigTime } from "@/types/domain";
 import type { Ch10Summary, Channel, ViewportTab, BottomTab } from "@/types/domain";
 
@@ -81,6 +84,11 @@ function main() {
   // ── Theme initialization ──
   const initialTheme = initTheme();
   toolbar.setThemeIcon(initialTheme);
+
+  // ── Hex view → status bar wiring ──
+  viewport.onHexSelect((offset) => {
+    statusbar.setCursorOffset(offset);
+  });
 
   function doToggleTheme() {
     const newTheme = toggleTheme();
@@ -315,12 +323,122 @@ function main() {
   });
 
   // ────────────────────────────────────────────
-  // Panel resize (drag handles)
+  // Panel resize (drag handles) + layout persistence
   // ────────────────────────────────────────────
+
+  const savedLayout = loadLayout();
+
+  // Restore saved sizes before initializing resize handles
+  if (savedLayout.sidebarWidth) applySize(sidebarEl, "col", savedLayout.sidebarWidth);
+  if (savedLayout.propsWidth) applySize(propsEl, "col", savedLayout.propsWidth);
+  if (savedLayout.bottomHeight) applySize(bottomEl, "row", savedLayout.bottomHeight);
 
   initPanelResize(sidebarEl, "col", "right");
   initPanelResize(propsEl, "col", "left");
   initPanelResize(bottomEl, "row", "top");
+
+  // Restore collapsed states after resize handles are initialized
+  if (savedLayout.sidebarCollapsed) collapsePanel(sidebarEl, "col");
+  if (savedLayout.propsCollapsed) collapsePanel(propsEl, "col");
+  if (savedLayout.bottomCollapsed) collapsePanel(bottomEl, "row");
+
+  // Debounced save — fires after any resize or collapse
+  let saveTimer: number;
+  function scheduleLayoutSave() {
+    clearTimeout(saveTimer);
+    saveTimer = window.setTimeout(() => {
+      const state: LayoutState = {
+        sidebarWidth: sidebarEl.offsetWidth || null,
+        propsWidth: propsEl.offsetWidth || null,
+        bottomHeight: bottomEl.offsetHeight || null,
+        sidebarCollapsed: panelStates.get(sidebarEl)?.collapsed ?? false,
+        propsCollapsed: panelStates.get(propsEl)?.collapsed ?? false,
+        bottomCollapsed: panelStates.get(bottomEl)?.collapsed ?? false,
+      };
+      saveLayout(state);
+    }, 300);
+  }
+
+  // Listen for layout changes (fired by resize handlers)
+  window.addEventListener("layout-changed", scheduleLayoutSave);
+
+  // ────────────────────────────────────────────
+  // Context menus
+  // ────────────────────────────────────────────
+
+  const ctxMenu = createContextMenu();
+
+  // Channel tree context menu
+  sidebarEl.addEventListener("contextmenu", (e) => {
+    const target = (e.target as HTMLElement).closest("[data-channel-id]") as HTMLElement | null;
+    if (!target) return;
+    e.preventDefault();
+
+    const chId = parseInt(target.dataset.channelId!, 10);
+    const ch = currentSummary
+      ? allChannels(currentSummary).find((c) => c.channelId === chId)
+      : null;
+
+    ctxMenu.show(e.clientX, e.clientY, [
+      {
+        label: `Copy channel ID (${chId})`,
+        action: () => navigator.clipboard?.writeText(String(chId)),
+      },
+      {
+        label: `Copy label: ${ch?.label ?? "—"}`,
+        action: () => navigator.clipboard?.writeText(ch?.label ?? ""),
+        disabled: !ch,
+      },
+      { separator: true },
+      {
+        label: "Show in packets view",
+        action: () => {
+          viewport.setActiveTab("packets");
+          bottom.addLog({ timestamp: now(), level: "info", message: `Filter packets to Ch ${chId} (not yet implemented)` });
+        },
+      },
+      {
+        label: "Show in waveform",
+        action: () => {
+          viewport.setActiveTab("waveform");
+          bottom.addLog({ timestamp: now(), level: "info", message: `Add Ch ${chId} to waveform (not yet implemented)` });
+        },
+      },
+    ]);
+  });
+
+  // Viewport packet table context menu
+  viewportEl.addEventListener("contextmenu", (e) => {
+    const row = (e.target as HTMLElement).closest("tr") as HTMLElement | null;
+    if (!row || !row.parentElement || row.parentElement.tagName === "THEAD") return;
+    // Only in packets tab
+    const activeTabEl = viewportEl.querySelector(".tab-bar__tab--active") as HTMLElement | null;
+    if (activeTabEl?.dataset.tab !== "packets") return;
+    e.preventDefault();
+
+    const cells = row.querySelectorAll("td");
+    const offsetText = cells[1]?.textContent?.trim() ?? "";
+    const indexText = cells[0]?.textContent?.trim() ?? "";
+
+    ctxMenu.show(e.clientX, e.clientY, [
+      {
+        label: `Copy offset (${offsetText})`,
+        action: () => navigator.clipboard?.writeText(offsetText),
+      },
+      {
+        label: `Copy packet index (${indexText})`,
+        action: () => navigator.clipboard?.writeText(indexText),
+      },
+      { separator: true },
+      {
+        label: "View in hex",
+        action: () => {
+          viewport.setActiveTab("hex");
+          bottom.addLog({ timestamp: now(), level: "info", message: `Jump to ${offsetText} in hex view (not yet implemented)` });
+        },
+      },
+    ]);
+  });
 
   // ────────────────────────────────────────────
   // Startup
@@ -335,6 +453,15 @@ function main() {
 
 // ── Panel resize logic ──
 
+/** Tracks collapse state for a panel. */
+interface PanelState {
+  collapsed: boolean;
+  /** Size before collapse, so we can restore. */
+  preCollapseSize: number;
+}
+
+const panelStates = new Map<HTMLElement, PanelState>();
+
 function initPanelResize(
   panelEl: HTMLElement,
   axis: "col" | "row",
@@ -343,11 +470,17 @@ function initPanelResize(
   const handle = panelEl.querySelector(`.resize-handle--${axis}.${side}`) as HTMLElement | null;
   if (!handle) return;
 
+  const defaultSize = axis === "col" ? panelEl.offsetWidth : panelEl.offsetHeight;
+  panelStates.set(panelEl, { collapsed: false, preCollapseSize: defaultSize });
+
   let startPos = 0;
   let startSize = 0;
 
   function onMouseDown(e: MouseEvent) {
     e.preventDefault();
+    const state = panelStates.get(panelEl)!;
+    if (state.collapsed) return; // don't allow drag when collapsed
+
     startPos = axis === "col" ? e.clientX : e.clientY;
     startSize = axis === "col" ? panelEl.offsetWidth : panelEl.offsetHeight;
     handle!.classList.add("resize-handle--active");
@@ -374,14 +507,8 @@ function initPanelResize(
     const max = axis === "col" ? 400 : 500;
     newSize = Math.max(min, Math.min(max, newSize));
 
-    if (axis === "col") {
-      panelEl.style.width = `${newSize}px`;
-      panelEl.style.minWidth = `${newSize}px`;
-    } else {
-      panelEl.style.height = `${newSize}px`;
-      panelEl.style.minHeight = `${newSize}px`;
-    }
-
+    applySize(panelEl, axis, newSize);
+    panelStates.get(panelEl)!.preCollapseSize = newSize;
     window.dispatchEvent(new Event("resize"));
   }
 
@@ -391,9 +518,53 @@ function initPanelResize(
     document.removeEventListener("mouseup", onMouseUp);
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
+    window.dispatchEvent(new Event("layout-changed"));
   }
 
+  // Double-click to collapse/expand
+  handle.addEventListener("dblclick", (e) => {
+    e.preventDefault();
+    const state = panelStates.get(panelEl)!;
+
+    if (state.collapsed) {
+      // Expand: restore pre-collapse size
+      applySize(panelEl, axis, state.preCollapseSize);
+      panelEl.classList.remove("panel--collapsed");
+      state.collapsed = false;
+    } else {
+      // Collapse: save current size, shrink to 0
+      state.preCollapseSize = axis === "col" ? panelEl.offsetWidth : panelEl.offsetHeight;
+      applySize(panelEl, axis, 0);
+      panelEl.classList.add("panel--collapsed");
+      state.collapsed = true;
+    }
+
+    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event("layout-changed"));
+  });
+
   handle.addEventListener("mousedown", onMouseDown);
+}
+
+/** Collapse a panel programmatically (used for restoring saved state). */
+function collapsePanel(panelEl: HTMLElement, axis: "col" | "row") {
+  const state = panelStates.get(panelEl);
+  if (!state || state.collapsed) return;
+
+  state.preCollapseSize = axis === "col" ? panelEl.offsetWidth : panelEl.offsetHeight;
+  applySize(panelEl, axis, 0);
+  panelEl.classList.add("panel--collapsed");
+  state.collapsed = true;
+}
+
+function applySize(el: HTMLElement, axis: "col" | "row", size: number) {
+  if (axis === "col") {
+    el.style.width = `${size}px`;
+    el.style.minWidth = `${size}px`;
+  } else {
+    el.style.height = `${size}px`;
+    el.style.minHeight = `${size}px`;
+  }
 }
 
 // ── Helpers ──

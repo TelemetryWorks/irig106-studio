@@ -15,6 +15,7 @@ export function createViewport(container: HTMLElement): {
   setSummary(summary: Ch10Summary): void;
   setActiveTab(tab: ViewportTab): void;
   resize(): void;
+  onHexSelect(cb: (offset: number) => void): void;
 } {
   container.classList.add("panel", "viewport");
 
@@ -35,6 +36,11 @@ export function createViewport(container: HTMLElement): {
   const content = container.querySelector("#viewport-content") as HTMLElement;
   let activeTab: ViewportTab = "waveform";
   let summary: Ch10Summary | null = null;
+  let hexSelectCb: ((offset: number) => void) | null = null;
+  let hexSelectedOffset = -1;
+  // Stable demo data so hex view doesn't regenerate on re-render
+  const hexData = new Uint8Array(512);
+  for (let i = 0; i < hexData.length; i++) hexData[i] = (i * 7 + 13 + (i >> 3)) & 0xff;
 
   // Tab click handling
   tabBar.addEventListener("click", (e) => {
@@ -121,25 +127,100 @@ export function createViewport(container: HTMLElement): {
   }
 
   function renderHex() {
-    const lines: string[] = [];
-    for (let addr = 0; addr < 256; addr += 16) {
-      const hex: string[] = [];
-      const ascii: string[] = [];
-      for (let i = 0; i < 16; i++) {
-        const byte = Math.floor(Math.random() * 256);
-        hex.push(byte.toString(16).padStart(2, "0"));
-        ascii.push(byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : "·");
+    const totalBytes = hexData.length;
+    const bytesPerRow = 16;
+    const rows: string[] = [];
+
+    for (let addr = 0; addr < totalBytes; addr += bytesPerRow) {
+      const hexCells: string[] = [];
+      const asciiCells: string[] = [];
+
+      for (let i = 0; i < bytesPerRow; i++) {
+        const offset = addr + i;
+        if (offset >= totalBytes) break;
+        const byte = hexData[offset];
+        const sel = offset === hexSelectedOffset ? " hex-byte--selected" : "";
+        hexCells.push(
+          `<span class="hex-byte${sel}" data-hex-offset="${offset}">${byte.toString(16).padStart(2, "0")}</span>`
+        );
+        const ch = byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : "·";
+        asciiCells.push(
+          `<span class="hex-ascii${sel}" data-ascii-offset="${offset}">${escHtml(ch)}</span>`
+        );
       }
-      lines.push(
-        `<span style="color:var(--c-text-tertiary)">${addr.toString(16).padStart(8, "0")}</span>  ${hex.slice(0, 8).join(" ")}  ${hex.slice(8).join(" ")}  <span style="color:var(--c-accent-text)">${ascii.join("")}</span>`
+
+      // Insert a gap between byte 7 and 8 for readability
+      const hexLeft = hexCells.slice(0, 8).join(" ");
+      const hexRight = hexCells.slice(8).join(" ");
+
+      rows.push(
+        `<div class="hex-row">` +
+        `<span class="hex-addr">${addr.toString(16).padStart(8, "0")}</span>` +
+        `<span class="hex-cells">${hexLeft}  ${hexRight}</span>` +
+        `<span class="hex-ascii-col">${asciiCells.join("")}</span>` +
+        `</div>`
       );
     }
 
     content.innerHTML = `
-      <div style="flex:1;overflow:auto;padding:8px;font-family:var(--font-mono);font-size:11px;line-height:1.6;white-space:pre;color:var(--c-text-secondary)">
-${lines.join("\n")}
+      <div class="hex-view" id="hex-view" tabindex="0">
+        ${rows.join("")}
       </div>
     `;
+
+    const hexView = content.querySelector("#hex-view") as HTMLElement;
+
+    // Click to select a byte
+    hexView.addEventListener("click", (e) => {
+      const target = e.target as HTMLElement;
+      const hexOffset = target.dataset.hexOffset ?? target.dataset.asciiOffset;
+      if (hexOffset != null) {
+        selectHexByte(parseInt(hexOffset, 10));
+      }
+    });
+
+    // Keyboard navigation
+    hexView.addEventListener("keydown", (e) => {
+      if (hexSelectedOffset < 0) return;
+
+      let next: number;
+      switch (e.key) {
+        case "ArrowRight": next = Math.min(totalBytes - 1, hexSelectedOffset + 1); break;
+        case "ArrowLeft":  next = Math.max(0, hexSelectedOffset - 1); break;
+        case "ArrowDown":  next = Math.min(totalBytes - 1, hexSelectedOffset + bytesPerRow); break;
+        case "ArrowUp":    next = Math.max(0, hexSelectedOffset - bytesPerRow); break;
+        case "Home":       next = 0; break;
+        case "End":        next = totalBytes - 1; break;
+        default: return; // don't prevent default for other keys
+      }
+
+      e.preventDefault();
+      selectHexByte(next);
+    });
+
+    // Focus hex view for keyboard nav
+    hexView.focus();
+  }
+
+  function selectHexByte(offset: number) {
+    hexSelectedOffset = offset;
+
+    // Clear previous selection
+    content.querySelectorAll(".hex-byte--selected, .hex-ascii--selected").forEach((el) => {
+      el.classList.remove("hex-byte--selected", "hex-ascii--selected");
+    });
+
+    // Highlight new selection
+    const hexEl = content.querySelector(`[data-hex-offset="${offset}"]`) as HTMLElement | null;
+    const asciiEl = content.querySelector(`[data-ascii-offset="${offset}"]`) as HTMLElement | null;
+    hexEl?.classList.add("hex-byte--selected");
+    asciiEl?.classList.add("hex-ascii--selected");
+
+    // Scroll into view if needed
+    hexEl?.scrollIntoView({ block: "nearest" });
+
+    // Notify callback
+    hexSelectCb?.(offset);
   }
 
   function renderPackets() {
@@ -184,11 +265,26 @@ ${lines.join("\n")}
   function renderTmats() {
     const tmats = summary?.tmatsRaw || "No TMATS data available.\nOpen a Ch10 file to view TMATS.";
 
+    const highlighted = tmats
+      .split("\n")
+      .map((line) => highlightTmatsLine(line))
+      .join("\n");
+
     content.innerHTML = `
-      <div style="flex:1;overflow:auto;padding:8px;font-family:var(--font-mono);font-size:11px;line-height:1.6;white-space:pre-wrap;color:var(--c-text-secondary)">
-${escHtml(tmats)}
+      <div class="tmats-view">
+        <div class="tmats-view__gutter" id="tmats-gutter"></div>
+        <pre class="tmats-view__code">${highlighted}</pre>
       </div>
     `;
+
+    // Fill line numbers
+    const gutter = content.querySelector("#tmats-gutter") as HTMLElement;
+    const lineCount = tmats.split("\n").length;
+    const gutterLines: string[] = [];
+    for (let i = 1; i <= lineCount; i++) {
+      gutterLines.push(`<span>${i}</span>`);
+    }
+    gutter.innerHTML = gutterLines.join("\n");
   }
 
   function resize() {
@@ -206,7 +302,12 @@ ${escHtml(tmats)}
   // Initial render
   renderContent();
 
-  return { setSummary, setActiveTab, resize };
+  return {
+    setSummary,
+    setActiveTab,
+    resize,
+    onHexSelect(cb: (offset: number) => void) { hexSelectCb = cb; },
+  };
 }
 
 // ── Waveform drawing ──
@@ -329,4 +430,86 @@ function tabLabel(tab: ViewportTab): string {
 
 function isMac(): boolean {
   return navigator.platform?.includes("Mac") ?? false;
+}
+
+/**
+ * Syntax-highlight a single line of TMATS text.
+ *
+ * TMATS line format: GROUP-N\ATTR-N:VALUE;
+ * Examples:
+ *   R-1\DSI-1:Recorder_1;
+ *   B-1\DLN-1:1553_BUS_A;
+ *   G\PN:Flight Test 042;
+ *
+ * Group codes (R, B, G, D, P, T, M, S, C, H, V) get color-coded.
+ */
+function highlightTmatsLine(line: string): string {
+  const trimmed = line.trim();
+
+  // Empty line
+  if (!trimmed) return "";
+
+  // Comment lines
+  if (trimmed.startsWith("//") || trimmed.startsWith("*")) {
+    return `<span class="tmats-comment">${escHtml(line)}</span>`;
+  }
+
+  // Standard TMATS attribute line: GROUP-N\...:VALUE;
+  const match = trimmed.match(/^([A-Z])([-\d]*)\\([^:]+):(.*)$/);
+  if (match) {
+    const groupLetter = match[1];
+    const groupIndex = match[2];
+    const attrPath = match[3];
+    let value = match[4];
+
+    // Strip trailing semicolon from value for separate styling
+    let semi = "";
+    if (value.endsWith(";")) {
+      semi = ";";
+      value = value.slice(0, -1);
+    }
+
+    const groupClass = tmatsGroupClass(groupLetter);
+
+    return (
+      `<span class="${groupClass}">${escHtml(groupLetter)}${escHtml(groupIndex)}</span>` +
+      `<span class="tmats-sep">\\</span>` +
+      `<span class="tmats-attr">${escHtml(attrPath)}</span>` +
+      `<span class="tmats-sep">:</span>` +
+      `<span class="tmats-value">${escHtml(value)}</span>` +
+      `<span class="tmats-semi">${semi}</span>`
+    );
+  }
+
+  // Fallback: unrecognized line
+  return `<span class="tmats-plain">${escHtml(line)}</span>`;
+}
+
+/**
+ * Map TMATS group letter to a CSS class for color coding.
+ *
+ * R = Recording (blue)
+ * G = General (purple)
+ * B = Bus (teal)
+ * D = Data (green)
+ * P = PCM (coral)
+ * T = Time (amber)
+ * M = Multiplexer (pink)
+ * S = Spacecraft (discrete blue)
+ */
+function tmatsGroupClass(letter: string): string {
+  const map: Record<string, string> = {
+    R: "tmats-group--r",
+    G: "tmats-group--g",
+    B: "tmats-group--b",
+    D: "tmats-group--d",
+    P: "tmats-group--p",
+    T: "tmats-group--t",
+    M: "tmats-group--m",
+    S: "tmats-group--s",
+    C: "tmats-group--c",
+    H: "tmats-group--h",
+    V: "tmats-group--v",
+  };
+  return map[letter] || "tmats-group--default";
 }
