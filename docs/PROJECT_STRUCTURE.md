@@ -89,12 +89,18 @@ irig106-studio/
 │   ├── tauri.conf.json                 Tauri config: window size, CSP, build commands.
 │   ├── Cargo.toml                      Rust dependencies (tauri, plugins, core crate).
 │   ├── build.rs                        Tauri build script.
+│   ├── capabilities/
+│   │   └── default.json                Default Tauri capability set for desktop commands.
+│   ├── icons/                          App icons used by tauri-build and desktop bundles.
+│   ├── gen/
+│   │   └── schemas/                    Generated Tauri schemas/capability metadata.
 │   └── src/
 │       ├── main.rs                     Desktop entry point (windows_subsystem).
 │       └── lib.rs                      #[tauri::command] functions:
 │                                       open_ch10_file(), read_packet_headers(),
-│                                       read_packet_data(). Currently stubs;
-│                                       swap in irig106-studio-core when ready.
+│                                       read_packet_data(), get_tmats().
+│                                       Holds the open Ch10File in app state
+│                                       and maps IPC 1:1 to PlatformAdapter.
 │
 ├── crates/                             ── RUST CRATES ──
 │   ├── irig106-studio-core/            Core library (native + wasm32)
@@ -125,6 +131,10 @@ irig106-studio/
 │           └── lib.rs                  StudioSession #[wasm_bindgen] glue.
 │                                       Build: wasm-pack build --target web
 │
+├── src/wasm/                           Generated WASM glue output (gitignored).
+│                                       Created by npm run build:wasm / wasm-pack:
+│                                       .wasm binary + JS loader used by WasmAdapter.
+│
 ├── docs/                               ── DOCUMENTATION ──
 │   │
 │   ├── requirements/
@@ -142,6 +152,15 @@ irig106-studio/
 │   │   ├── ADR-006-domain-types.md     Domain types as the contract.
 │   │   └── ADR-008-wasm-architecture.md WASM deployment stack.
 │   │
+│   ├── implementation/
+│   │   ├── README.md                   Implementation-series index.
+│   │   └── 01-08-*.md                  Design/build notes from the browser-shell
+│   │                                   and integration planning phases.
+│   ├── images/                         Reference screenshots and diagrams used by docs.
+│   ├── architecture.md                 High-level architecture overview.
+│   ├── implementation-plan.md          Original implementation sequencing notes.
+│   ├── INTEGRATION.md                  How external TelemetryWorks crates plug in:
+│   │                                   irig106-time, irig106-tmats, irig106-decode.
 │   ├── PROJECT_STRUCTURE.md            ← YOU ARE HERE
 │   └── CONTRIBUTING.md                 Onboarding guide for new developers.
 │
@@ -175,6 +194,20 @@ User action (click, keyboard, drag-drop)
         ├── toolbar.setVersion()
         └── toolbar.setTime()
 ```
+
+## Ecosystem Boundary
+
+The studio is a consumer of the broader TelemetryWorks crate ecosystem:
+
+- `irig106-studio-core` owns file access, indexing, summaries, and shared domain types
+- `irig106-studio-wasm` is a thin browser-facing binding layer over the core crate
+- `src-tauri` is a thin desktop-facing IPC layer over the core crate
+- future crates like `irig106-time`, `irig106-tmats`, and `irig106-decode`
+  should plug into `irig106-studio-core`, not directly into the frontend
+
+That boundary matters because the frontend should only know about
+`domain.ts` and `PlatformAdapter`, never about parser internals or
+spec-level decoder implementation details.
 
 ## Component API Pattern
 
