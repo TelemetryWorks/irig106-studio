@@ -7,3 +7,12 @@ members = [
     # it requires wasm32 target and wasm-pack. Build separately:
     #   cd crates/irig106-studio-wasm && wasm-pack build --target web
 ]
+
+[profile.dev]
+incremental = true
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true
