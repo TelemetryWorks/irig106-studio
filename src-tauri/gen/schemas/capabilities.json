@@ -1,1 +1,1 @@
-{}
+{"default":{"identifier":"default","description":"Default capabilities for IRIG106-Studio","local":true,"windows":["main"],"permissions":["core:default","dialog:default","fs:default"]}}
