@@ -268,3 +268,9 @@ Parallel tracks:
 
 **Right now, Phase 1 and Phase 2A can run in parallel with zero
 dependencies on each other or on external crates.**
+# Roadmap
+
+- [ ] List packets allow for the table to be filtered.
+- [ ] Pick Packet by index number.
+- [ ] Display raw hex broken apart by fields.
+- [ ] Make sure file hex address is displayed in table format.
