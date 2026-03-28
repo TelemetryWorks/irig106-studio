@@ -61,7 +61,7 @@ impl PacketIndex {
                 header_bytes[6],
                 header_bytes[7],
             ]);
-            let data_type = header_bytes[18]; // byte 18 in the header
+            let data_type = header_bytes[16]; // byte 16 in the header (see parse_header)
 
             // Sanity check: packet_length must be at least header size
             if (packet_length as usize) < PACKET_HEADER_SIZE {
@@ -163,8 +163,7 @@ fn parse_header(bytes: &[u8], file_offset: u64) -> Result<PacketHeader> {
         bytes[18], bytes[19], bytes[20], bytes[21], bytes[22], bytes[23], 0, 0,
     ]);
 
-    // TODO: validate checksum (header checksum is in the packet flags)
-    let checksum_valid = true; // Placeholder
+    let checksum_valid = crate::checksum::validate_header_checksum(bytes);
 
     Ok(PacketHeader {
         sync_pattern,

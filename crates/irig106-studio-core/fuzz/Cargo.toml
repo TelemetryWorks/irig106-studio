@@ -1,0 +1,24 @@
+[package]
+name = "irig106-studio-core-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+irig106-studio-core = { path = ".." }
+
+[[bin]]
+name = "fuzz_packet_index"
+path = "fuzz_targets/fuzz_packet_index.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_checksum"
+path = "fuzz_targets/fuzz_checksum.rs"
+test = false
+doc = false

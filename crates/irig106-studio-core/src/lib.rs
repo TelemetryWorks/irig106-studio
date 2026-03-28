@@ -52,6 +52,7 @@
 //! - L1-STD-020:  Support all Ch10 data types
 //! - L1-STD-030:  Parse all IRIG time formats
 
+pub mod checksum;
 pub mod decode;
 pub mod error;
 pub mod file;
@@ -68,3 +69,6 @@ pub use file::Ch10File;
 pub use index::PacketIndex;
 pub use summary::Ch10Summary;
 pub use types::*;
+
+#[cfg(test)]
+mod tests;
