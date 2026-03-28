@@ -242,3 +242,11 @@ that `doToggleTheme()` in `main.ts` is calling `viewport.resize()`.
 
 Ensure `tsconfig.json` has the paths configured AND `vite.config.ts`
 has the matching `resolve.alias`. Both must agree.
+
+---
+
+## Integrating TelemetryWorks Crates
+
+When `irig106-time`, `irig106-tmats`, or `irig106-decode` are ready
+to wire in, see **[INTEGRATION.md](INTEGRATION.md)** for step-by-step
+instructions, expected interfaces, and file-by-file change lists.

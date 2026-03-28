@@ -174,21 +174,26 @@ streaming strategy (Phase 3.5) will be needed.
 ## Phase 4 — Data Type Decoders
 
 **Goal:** Decode raw packet payloads into structured, displayable data.
-Mostly blocked on spec-level format knowledge being codified in the
-crate ecosystem.
+
+**BLOCKED on:** `irig106-decode` crate (https://github.com/TelemetryWorks/irig106-decode).
+The studio will *consume* the decoders, not implement them. When the
+crate is ready, integration is a matter of:
+1. Adding `irig106-decode` as a dependency
+2. Calling the appropriate decoder based on `DataType`
+3. Mapping decoded structs to the frontend display types
 
 | #    | Task                                          | Blocked on             | Est. |
 |------|-----------------------------------------------|------------------------|------|
-| 4.1  | **MIL-STD-1553 decoder.** Command word, status word, data words. Bus A/B. RT/SA/WC extraction. | Spec knowledge | L |
-| 4.2  | **PCM decoder.** Frame sync, minor/major frame structure, word extraction. | Spec + TMATS P-group | L |
-| 4.3  | **ARINC 429 decoder.** Label, SDI, SSM, data field extraction. BNR/BCD/discrete formats. | Spec knowledge | M |
-| 4.4  | **Time data decoder.** IRIG-B, GPS, RTC, NTP format extraction from Time channel payloads. | `irig106-time` | M |
-| 4.5  | **Analog decoder.** Sample extraction, scaling from TMATS D-group parameters. | TMATS parsing | M |
-| 4.6  | **Ethernet decoder.** Frame extraction from Ch10 Ethernet packets. | Spec knowledge | M |
-| 4.7  | **UART decoder.** Serial data extraction with timing. | Spec knowledge | S |
-| 4.8  | **Video decoder.** MPEG-TS extraction (not decoding the video — just extracting the transport stream for external players). | Spec knowledge | M |
-| 4.9  | **Discrete decoder.** Bit-level extraction with TMATS D-group mapping. | TMATS parsing | S |
-| 4.10 | **Message decoder.** Generic message extraction. | Spec knowledge | S |
+| 4.1  | **MIL-STD-1553 decoder integration.** Command word, status word, data words. Bus A/B. RT/SA/WC extraction. | `irig106-decode` | L |
+| 4.2  | **PCM decoder integration.** Frame sync, minor/major frame structure, word extraction. | `irig106-decode` + `irig106-tmats` P-group | L |
+| 4.3  | **ARINC 429 decoder integration.** Label, SDI, SSM, data field extraction. BNR/BCD/discrete formats. | `irig106-decode` | M |
+| 4.4  | **Time data decoder integration.** IRIG-B, GPS, RTC, NTP format extraction from Time channel payloads. | `irig106-decode` + `irig106-time` | M |
+| 4.5  | **Analog decoder integration.** Sample extraction, scaling from TMATS D-group parameters. | `irig106-decode` + `irig106-tmats` | M |
+| 4.6  | **Ethernet decoder integration.** Frame extraction from Ch10 Ethernet packets. | `irig106-decode` | M |
+| 4.7  | **UART decoder integration.** Serial data extraction with timing. | `irig106-decode` | S |
+| 4.8  | **Video decoder integration.** MPEG-TS extraction (not video decoding — just transport stream). | `irig106-decode` | M |
+| 4.9  | **Discrete decoder integration.** Bit-level extraction with TMATS D-group mapping. | `irig106-decode` + `irig106-tmats` | S |
+| 4.10 | **Message decoder integration.** Generic message extraction. | `irig106-decode` | S |
 
 ---
 
@@ -227,53 +232,128 @@ Blocked on Phase 4 decoders.
 
 ## Milestone Summary
 
-| Milestone | Description                        | Blocked? | Target |
-|-----------|------------------------------------|----------|--------|
-| **v0.1**  | UI shell complete (Phase 0)        | No       | Done   |
-| **v0.2**  | UI hardened + tested (Phase 1)     | No       | —      |
-| **v0.3**  | Core crate reads real Ch10 (Phase 2A) | No    | —      |
-| **v0.4**  | Desktop opens real files (Phase 2B) | Partial | —      |
-| **v0.5**  | Browser WASM build (Phase 3)       | Phase 2  | —      |
-| **v0.6**  | Data decoders (Phase 4)            | Phase 2  | —      |
-| **v1.0**  | Full visualization + export (Phase 5) | Phase 4 | —   |
+| Milestone | Description                        | Status     | Blocked on          |
+|-----------|------------------------------------|------------|---------------------|
+| **v0.1**  | UI shell complete (Phase 0)        | **Done**   | —                   |
+| **v0.2**  | UI hardened + tested (Phase 1)     | **Done**   | —                   |
+| **v0.3**  | Core crate reads real Ch10 (2A)    | **Done**   | —                   |
+| **v0.4**  | Desktop opens real files (2B)      | **Partial** | `irig106-time`, `irig106-tmats` |
+| **v0.5**  | Browser WASM build (Phase 3)       | **Scaffolded** | Verify on machine |
+| **v0.6**  | Data decoders (Phase 4)            | Blocked    | `irig106-decode`    |
+| **v1.0**  | Full visualization + export (5+6)  | Blocked    | Phase 4             |
 
 ---
 
 ## Current Status (updated 2026-03-28)
 
+### Completion summary
+
+| Phase | Status | Detail |
+|-------|--------|--------|
+| Phase 0 — Foundation | **Complete** | 18/18 tasks |
+| Phase 1 — UI Hardening | **Complete** | 14/14 tasks, 42 Vitest tests |
+| Phase 2A — Core Tests | **Complete** | 61 Rust tests, 2 fuzz targets, checksum impl |
+| Phase 2B — Integration | **Partial** | 2.9 TMATS extraction, 2.10 RTC extraction, 2.13 Tauri backend — done. 2.11 and 2.12 blocked. |
+| Phase 3 — WASM | **Scaffolded** | 3.1 crate, 3.2 adapter, 3.3 pipeline — done. Needs `wasm-pack build` verification. |
+| Phase 4 — Decoders | **Blocked** | Waiting on `irig106-decode` crate |
+| Phase 5 — Visualization | **Blocked** | Waiting on Phase 4 |
+| Phase 6 — Multi-version | **Blocked** | Waiting on Phase 4 + test files |
+
+### Dependency graph
+
 ```
-Phase 0 (DONE) ✓
-    │
-    ├──→ Phase 1 (UI Polish + Testing)          ✓ COMPLETE (14/14 tasks)
-    │
-    ├──→ Phase 2A (Core Crate Tests)            ✓ COMPLETE (2.1–2.10)
-    │       │
-    │       ├──→ Phase 2B (Tauri Integration)   ✓ 2.9, 2.10, 2.13 DONE
-    │       │                                     2.11, 2.12 blocked on crates
-    │       │
-    │       └──→ Phase 3 (WASM)                 ✓ 3.1–3.3 DONE (scaffold + pipeline)
-    │               │                             3.4–3.6 ready after wasm-pack build
-    │               └──→ Phase 3.5 (Large files)  future
-    │
-    └──→ Phase 4 (Decoders)                     ← NEXT: needs spec knowledge
-            │
-            └──→ Phase 5 (Visualization)        ← needs Phase 4
-                    │
-                    └──→ Phase 6 (Multi-version) ← needs Phase 4 + test files
+Completed work:
+  Phase 0 ✓ → Phase 1 ✓ → Phase 2A ✓ → Phase 2B (partial) ✓
+                                      → Phase 3 (scaffolded) ✓
+
+Blocked on TelemetryWorks crate ecosystem:
+  ┌─────────────────────────────────────────────────────────────┐
+  │ github.com/TelemetryWorks                                  │
+  │                                                             │
+  │   irig106-time   (v0.2.0, API still evolving)              │
+  │     → unblocks: 2.12 time correlation, 4.4 time decoder    │
+  │                                                             │
+  │   irig106-tmats  (not yet started / early)                  │
+  │     → unblocks: 2.11 TMATS-driven labels, 4.2 PCM setup,  │
+  │                  4.5 analog scaling, 4.9 discrete mapping,  │
+  │                  6.1 version detection                      │
+  │                                                             │
+  │   irig106-decode (not yet started)                          │
+  │     → unblocks: Phase 4 entirely (1553, PCM, ARINC, etc.)  │
+  │     → which unblocks: Phase 5 (real waveforms, export)      │
+  │     → which unblocks: Phase 6 (multi-version)               │
+  └─────────────────────────────────────────────────────────────┘
 ```
 
-### What to do right now
+### What to do when coming back to this repo
 
+**Immediate (no crate deps needed):**
 1. `cargo test --workspace` — verify all 61 Rust tests pass
-2. `cargo tauri dev` — open a real .ch10 file in the desktop app
-3. `npm run build:wasm` — compile WASM module, then test in browser
-4. Start Phase 4 decoders (1553, PCM, ARINC) as spec knowledge is codified
+2. `cargo tauri dev` — open a real `.ch10` file in the desktop app
+3. `npm run build:wasm` — compile WASM module, test in browser
+4. `npm run test` — verify 42 frontend tests pass
 
-### What's blocked
+**When `irig106-time` API stabilizes:**
+1. Add `irig106-time = { path = "..." }` to `crates/irig106-studio-core/Cargo.toml`
+2. Implement task 2.12: `TimeCorrelator` in `src/time.rs`
+3. Wire into `Ch10File` — add `rtc_to_irig_time()` method
+4. Wire into `PacketHeaderDto` — add absolute timestamp field
+5. Update frontend `PacketHeader` type and packet table column
+6. Update waveform timescale to show real IRIG time
 
-| Task | Blocked on |
-|---|---|
-| TMATS-driven channel labels (2.11) | `irig106-tmats` crate |
-| Time correlation (2.12) | `irig106-time` crate |
-| Data decoders (Phase 4) | Spec-level format knowledge |
-| Real waveform data (Phase 5) | Phase 4 decoders |
+**When `irig106-tmats` is available:**
+1. Add `irig106-tmats = { path = "..." }` to core crate
+2. Implement task 2.11: parse TMATS in `summary.rs` for real channel labels
+3. Replace synthetic "Ch N" labels with TMATS-sourced names
+4. Group channels into real data sources from TMATS R-group
+
+**When `irig106-decode` is available:**
+1. Add `irig106-decode = { path = "..." }` to core crate
+2. Implement `decode.rs` module — call decoder per `DataType`
+3. Each decoder returns structured data (e.g., 1553 → command/status/data words)
+4. Frontend: add decoded data display in properties panel
+5. Frontend: feed real decoded samples to waveform engine
+6. This unlocks Phase 5 (visualization) and Phase 6 (multi-version)
+
+### Integration trait interfaces (pre-defined)
+
+The studio expects these interfaces from the ecosystem crates.
+See `docs/INTEGRATION.md` for full details.
+
+```rust
+// From irig106-time:
+fn correlate(rtc: u64, calibration: &[TimeCalibrationPoint]) -> IrigTime;
+
+// From irig106-tmats:
+fn parse(tmats_text: &str) -> TmatsMetadata;
+struct TmatsMetadata {
+    channels: Vec<TmatsChannel>,  // label, data_source, data_type info
+    recording_info: RecordingInfo, // R-group metadata
+    standard_version: String,
+}
+
+// From irig106-decode:
+fn decode_packet(data_type: u8, payload: &[u8]) -> DecodedData;
+enum DecodedData {
+    Mil1553 { messages: Vec<Mil1553Message> },
+    Pcm { samples: Vec<f64> },
+    Arinc429 { words: Vec<Arinc429Word> },
+    // ... etc
+}
+```
+
+### Project metrics
+
+| Metric | Value |
+|--------|-------|
+| Frontend (TS+CSS) | 21 files, 1,349 lines |
+| Core crate (Rust) | 12 files, 2,039 lines |
+| WASM crate (Rust) | 1 file, 136 lines |
+| Tauri backend (Rust) | 2 files, 167 lines |
+| Documentation | 14 files, 1,774 lines |
+| Frontend tests | 42 (Vitest) |
+| Rust tests | 61 (cargo test) |
+| Fuzz targets | 2 (cargo-fuzz) |
+| ADRs | 7 |
+| L1 coverage | 76% (19/25) |
+| **Total source** | **~5,500 lines** |
