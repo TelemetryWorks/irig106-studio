@@ -561,3 +561,227 @@ mod file_tests {
         assert!(all_channels.contains(&2));
     }
 }
+
+/// Golden file test — a complete minimal Ch10 file with TMATS, 1553, and Time packets.
+#[cfg(test)]
+mod golden_file_tests {
+    use super::test_helpers::*;
+    use crate::file::Ch10File;
+
+    /// Build a realistic minimal Ch10 file:
+    ///   - Channel 0: TMATS (Computer Generated, Format 1)
+    ///   - Channel 1: MIL-STD-1553 Format A
+    ///   - Channel 4: IRIG Time
+    fn build_golden_file() -> Vec<u8> {
+        // TMATS payload: minimal valid TMATS text
+        let tmats_text = b"R-1\\ID:Golden Test;\nR-1\\NSS:1;\nR-1\\DSI-1:Recorder_1;\n";
+        let tmats_pkt = make_packet(0, 0x01, 0, tmats_text.len(), 0x00);
+        // Overwrite payload with actual TMATS text
+        let mut tmats = tmats_pkt;
+        tmats[24..24 + tmats_text.len()].copy_from_slice(tmats_text);
+
+        // 1553 packets
+        let pkt_1553_a = make_packet(1, 0x19, 0, 64, 0xAA);
+        let pkt_1553_b = make_packet(1, 0x19, 1, 64, 0xBB);
+        let pkt_1553_c = make_packet(1, 0x19, 2, 64, 0xCC);
+
+        // Time packet
+        let time_pkt = make_packet(4, 0x11, 0, 16, 0x00);
+
+        // Second batch of 1553
+        let pkt_1553_d = make_packet(1, 0x19, 3, 64, 0xDD);
+
+        make_file(&[tmats, pkt_1553_a, pkt_1553_b, time_pkt, pkt_1553_c, pkt_1553_d])
+    }
+
+    #[test]
+    fn golden_file_opens_successfully() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+        assert_eq!(file.file_info().filename, "golden.ch10");
+    }
+
+    #[test]
+    fn golden_file_packet_count() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+        assert_eq!(file.file_info().packet_count, 6);
+    }
+
+    #[test]
+    fn golden_file_channels() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+        let ids = file.index().channel_ids();
+        assert_eq!(ids, vec![0, 1, 4]);
+    }
+
+    #[test]
+    fn golden_file_channel_counts() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+        assert_eq!(file.index().count_for_channel(0), 1);  // TMATS
+        assert_eq!(file.index().count_for_channel(1), 4);  // 1553
+        assert_eq!(file.index().count_for_channel(4), 1);  // Time
+    }
+
+    #[test]
+    fn golden_file_tmats_extraction() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+
+        // Read the TMATS packet payload (channel 0, first packet)
+        let entry = file.index().iter().find(|e| e.channel_id == 0).unwrap();
+        let header = file.read_header(0).unwrap();
+        let payload = file
+            .read_data(entry.file_offset + 24, header.data_length as usize)
+            .unwrap();
+
+        let text = std::str::from_utf8(payload).unwrap();
+        assert!(text.contains("R-1\\ID:Golden Test;"));
+        assert!(text.contains("R-1\\NSS:1;"));
+    }
+
+    #[test]
+    fn golden_file_summary() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+        let summary = file.summary().unwrap();
+
+        assert_eq!(summary.file.packet_count, 6);
+        assert!(!summary.data_sources.is_empty());
+
+        // All channels should be present in summary
+        let all_ch_ids: Vec<u16> = summary
+            .data_sources
+            .iter()
+            .flat_map(|ds| &ds.channels)
+            .map(|ch| ch.channel_id)
+            .collect();
+        assert!(all_ch_ids.contains(&0));
+        assert!(all_ch_ids.contains(&1));
+        assert!(all_ch_ids.contains(&4));
+    }
+
+    #[test]
+    fn golden_file_1553_sequence_numbers() {
+        let data = build_golden_file();
+        let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
+
+        // Read all 1553 headers and check sequence numbers
+        let mut seq_nums: Vec<u8> = Vec::new();
+        for (i, entry) in file.index().iter().enumerate() {
+            if entry.channel_id == 1 {
+                let header = file.read_header(i).unwrap();
+                seq_nums.push(header.sequence_number);
+            }
+        }
+        assert_eq!(seq_nums, vec![0, 1, 2, 3]);
+    }
+}
+
+/// Channel enumeration helper tests.
+#[cfg(test)]
+mod channel_enumeration_tests {
+    use super::test_helpers::*;
+    use crate::index::PacketIndex;
+    use crate::io::MemBuffer;
+
+    #[test]
+    fn data_type_for_channel() {
+        let file = make_file(&[
+            make_packet(1, 0x19, 0, 16, 0x00),
+            make_packet(2, 0x09, 0, 16, 0x00),
+            make_packet(3, 0x38, 0, 16, 0x00),
+        ]);
+        let buf = MemBuffer::from_vec(file);
+        let index = PacketIndex::build(&buf).unwrap();
+
+        // Verify data types via iter
+        let ch1_type = index.iter().find(|e| e.channel_id == 1).unwrap().data_type;
+        let ch2_type = index.iter().find(|e| e.channel_id == 2).unwrap().data_type;
+        let ch3_type = index.iter().find(|e| e.channel_id == 3).unwrap().data_type;
+
+        assert_eq!(ch1_type, 0x19); // 1553
+        assert_eq!(ch2_type, 0x09); // PCM
+        assert_eq!(ch3_type, 0x38); // ARINC 429
+    }
+
+    #[test]
+    fn byte_count_for_channel() {
+        let file = make_file(&[
+            make_packet(1, 0x19, 0, 32, 0x00),  // 56 bytes total
+            make_packet(1, 0x19, 1, 64, 0x00),  // 88 bytes total
+            make_packet(2, 0x09, 0, 128, 0x00), // 152 bytes total
+        ]);
+        let buf = MemBuffer::from_vec(file);
+        let index = PacketIndex::build(&buf).unwrap();
+
+        // Sum packet lengths for channel 1
+        let ch1_bytes: u64 = index
+            .iter()
+            .filter(|e| e.channel_id == 1)
+            .map(|e| e.packet_length as u64)
+            .sum();
+        assert_eq!(ch1_bytes, 56 + 88);
+
+        let ch2_bytes: u64 = index
+            .iter()
+            .filter(|e| e.channel_id == 2)
+            .map(|e| e.packet_length as u64)
+            .sum();
+        assert_eq!(ch2_bytes, 152);
+    }
+}
+
+/// Checksum integration tests — verify checksum validation flows through parse_header.
+#[cfg(test)]
+mod checksum_integration_tests {
+    use super::test_helpers::*;
+    use crate::index::PacketIndex;
+    use crate::io::MemBuffer;
+
+    #[test]
+    fn packets_without_checksum_flag_are_valid() {
+        // Default make_packet sets flags to 0x00 (no checksum)
+        let file = make_file(&[make_packet(1, 0x19, 0, 32, 0xAA)]);
+        let buf = MemBuffer::from_vec(file);
+        let index = PacketIndex::build(&buf).unwrap();
+        let header = index.read_header(0, &buf).unwrap();
+        assert!(header.checksum_valid);
+    }
+
+    #[test]
+    fn packet_with_valid_16bit_checksum() {
+        let mut pkt = make_packet(1, 0x19, 0, 32, 0xAA);
+        // Set flags to 16-bit checksum (0x02)
+        pkt[14] = 0x02;
+        pkt[15] = 0x00;
+        // Compute and store checksum of first 22 bytes into bytes 22-23
+        let sum = crate::checksum::checksum_16(&pkt[..22]);
+        let sum_bytes = sum.to_le_bytes();
+        pkt[22] = sum_bytes[0];
+        pkt[23] = sum_bytes[1];
+
+        let buf = MemBuffer::from_vec(pkt);
+        let index = PacketIndex::build(&buf).unwrap();
+        let header = index.read_header(0, &buf).unwrap();
+        assert!(header.checksum_valid);
+    }
+
+    #[test]
+    fn packet_with_invalid_16bit_checksum() {
+        let mut pkt = make_packet(1, 0x19, 0, 32, 0xAA);
+        // Set flags to 16-bit checksum
+        pkt[14] = 0x02;
+        pkt[15] = 0x00;
+        // Set wrong checksum
+        pkt[22] = 0xFF;
+        pkt[23] = 0xFF;
+
+        let buf = MemBuffer::from_vec(pkt);
+        let index = PacketIndex::build(&buf).unwrap();
+        let header = index.read_header(0, &buf).unwrap();
+        assert!(!header.checksum_valid);
+    }
+}

@@ -155,6 +155,135 @@ export class TauriAdapter implements PlatformAdapter {
   }
 }
 
+// ── WASM adapter (browser mode — calls irig106-studio-wasm) ──
+
+/**
+ * Interface matching the WASM module's StudioSession class.
+ * Defined here to avoid a hard dependency on the WASM build.
+ */
+interface WasmStudioSession {
+  summary(): unknown;
+  read_headers(start: number, count: number): unknown;
+  read_data(offset: bigint, length: number): Uint8Array;
+  tmats_text(): string;
+  packet_count(): number;
+  channel_ids(): Uint16Array;
+  free(): void;
+}
+
+interface WasmModule {
+  default: () => Promise<void>;
+  StudioSession: {
+    new (data: Uint8Array, filename: string): WasmStudioSession;
+  };
+}
+
+class WasmAdapter implements PlatformAdapter {
+  readonly name = "wasm" as const;
+  private session: WasmStudioSession | null = null;
+  private wasmModule: WasmModule | null = null;
+  private logListeners: Set<(entry: LogEntry) => void> = new Set();
+
+  private emit(level: LogEntry["level"], message: string) {
+    const ts = formatTimestamp();
+    this.logListeners.forEach((cb) => cb({ timestamp: ts, level, message }));
+  }
+
+  async loadModule(): Promise<boolean> {
+    if (this.wasmModule) return true;
+    try {
+      // Dynamic import — Vite ignores this at build time.
+      // The WASM module is only present after `wasm-pack build`.
+      const wasmPath = "../wasm/irig106_studio_wasm.js";
+      this.wasmModule = await import(/* @vite-ignore */ wasmPath) as unknown as WasmModule;
+      await this.wasmModule.default();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async openFile(): Promise<Ch10Summary | null> {
+    if (!this.wasmModule) {
+      const loaded = await this.loadModule();
+      if (!loaded) throw new Error("WASM module not available");
+    }
+
+    // Use the browser File API to get the file bytes
+    const fileHandle = await pickFile();
+    if (!fileHandle) return null;
+
+    this.emit("info", `Opening ${fileHandle.name} (${formatSize(fileHandle.size)})`);
+
+    const arrayBuffer = await fileHandle.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+
+    this.emit("info", "Parsing Ch10 structure via WASM...");
+
+    // Free previous session if any
+    this.session?.free();
+
+    this.session = new this.wasmModule!.StudioSession(bytes, fileHandle.name);
+    const summary = this.session.summary() as Ch10Summary;
+
+    this.emit("info", `Indexed ${summary.file.packetCount.toLocaleString()} packets`);
+
+    return summary;
+  }
+
+  async readPacketHeaders(startIndex: number, count: number): Promise<PacketHeader[]> {
+    if (!this.session) return [];
+    return this.session.read_headers(startIndex, count) as unknown as PacketHeader[];
+  }
+
+  async readPacketData(fileOffset: number, length: number): Promise<Uint8Array> {
+    if (!this.session) return new Uint8Array(0);
+    return this.session.read_data(BigInt(fileOffset), length);
+  }
+
+  onLog(callback: (entry: LogEntry) => void): () => void {
+    this.logListeners.add(callback);
+    return () => this.logListeners.delete(callback);
+  }
+}
+
+/** Open a file picker dialog in the browser. */
+function pickFile(): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".ch10,.c10";
+    input.addEventListener("change", () => {
+      resolve(input.files?.[0] ?? null);
+    });
+    // If the user cancels, the change event never fires.
+    // Use a focus listener to detect cancel (imperfect but common).
+    window.addEventListener("focus", () => {
+      setTimeout(() => {
+        if (!input.files?.length) resolve(null);
+      }, 500);
+    }, { once: true });
+    input.click();
+  });
+}
+
+function formatTimestamp(): string {
+  const d = new Date();
+  return [
+    d.getHours().toString().padStart(2, "0"),
+    d.getMinutes().toString().padStart(2, "0"),
+    d.getSeconds().toString().padStart(2, "0"),
+    ".",
+    d.getMilliseconds().toString().padStart(3, "0"),
+  ].join("");
+}
+
+function formatSize(bytes: number): string {
+  if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+  if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+  return `${(bytes / 1e3).toFixed(1)} KB`;
+}
+
 // ── Factory ──
 
 let _adapter: PlatformAdapter | null = null;
@@ -166,10 +295,21 @@ export function getPlatform(): PlatformAdapter {
       // Use mock until Tauri backend is implemented
       _adapter = new MockAdapter();
     } else {
-      console.log("[platform] Browser mode — using mock adapter");
+      // In browser mode, try WASM first, fall back to mock
+      // The WasmAdapter will fail gracefully if the WASM module isn't built yet
+      console.log("[platform] Browser mode — using mock adapter (WASM adapter available when built)");
       _adapter = new MockAdapter();
+      // When WASM is ready, switch the factory:
+      // _adapter = new WasmAdapter();
     }
   }
+  return _adapter;
+}
+
+/** Force-switch to WASM adapter (call after WASM module is verified present). */
+export function enableWasmAdapter(): PlatformAdapter {
+  _adapter = new WasmAdapter();
+  console.log("[platform] Switched to WASM adapter");
   return _adapter;
 }
 

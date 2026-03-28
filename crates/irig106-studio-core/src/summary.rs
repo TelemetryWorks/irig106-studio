@@ -25,18 +25,21 @@ impl Ch10Summary {
     pub fn build(
         info: &Ch10FileInfo,
         index: &PacketIndex,
-        _buffer: &dyn FileBuffer,
+        buffer: &dyn FileBuffer,
     ) -> Result<Self> {
         // Enumerate channels from the packet index
         let channel_ids = index.channel_ids();
 
-        // TODO: Parse TMATS (channel 0) to get labels and data source grouping.
-        // For now, group all channels under a single synthetic data source.
+        // Extract TMATS text from channel 0 packets
+        let tmats_raw = extract_tmats_from_index(index, buffer)?;
+
+        // TODO: When irig106-tmats is available, parse tmats_raw to get
+        // real channel labels and data source groupings. For now, group
+        // all channels under a single synthetic data source.
         let channels: Vec<Channel> = channel_ids
             .iter()
             .map(|&cid| {
                 let count = index.count_for_channel(cid);
-                // Find the data type from the first packet for this channel
                 let data_type = index
                     .iter()
                     .find(|e| e.channel_id == cid)
@@ -60,13 +63,26 @@ impl Ch10Summary {
             channels,
         }];
 
-        // TODO: Extract TMATS text from channel 0 packets
-        let tmats_raw = String::new();
-
         Ok(Self {
             file: info.clone(),
             data_sources,
             tmats_raw,
         })
     }
+}
+
+/// Extract raw TMATS text from channel 0 packets via the index.
+fn extract_tmats_from_index(index: &PacketIndex, buffer: &dyn FileBuffer) -> Result<String> {
+    let mut tmats_bytes: Vec<u8> = Vec::new();
+
+    for (i, entry) in index.iter().enumerate() {
+        if entry.channel_id == 0 {
+            let header = index.read_header(i, buffer)?;
+            let payload_offset = entry.file_offset + PACKET_HEADER_SIZE as u64;
+            let payload = buffer.read_at(payload_offset, header.data_length as usize)?;
+            tmats_bytes.extend_from_slice(payload);
+        }
+    }
+
+    Ok(String::from_utf8_lossy(&tmats_bytes).into_owned())
 }

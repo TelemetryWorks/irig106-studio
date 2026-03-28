@@ -121,4 +121,57 @@ impl Ch10File {
     pub fn read_data(&self, file_offset: u64, length: usize) -> Result<&[u8]> {
         self.buffer.read_at(file_offset, length)
     }
+
+    /// Extract raw TMATS text from channel 0 packets.
+    ///
+    /// Concatenates the data payload of all channel 0 packets and
+    /// returns it as a UTF-8 string. Returns an empty string if
+    /// no channel 0 packets exist.
+    ///
+    /// Requirements traced:
+    ///   L1-FILE-020  Parse and display TMATS metadata
+    ///   L2-FILE-020  Ch10Summary SHALL include raw TMATS string
+    pub fn extract_tmats(&self) -> Result<String> {
+        let mut tmats_bytes: Vec<u8> = Vec::new();
+
+        for (i, entry) in self.index.iter().enumerate() {
+            if entry.channel_id == 0 {
+                let header = self.read_header(i)?;
+                let payload_offset = entry.file_offset + PACKET_HEADER_SIZE as u64;
+                let payload = self.buffer.read_at(payload_offset, header.data_length as usize)?;
+                tmats_bytes.extend_from_slice(payload);
+            }
+        }
+
+        Ok(String::from_utf8_lossy(&tmats_bytes).into_owned())
+    }
+
+    /// Extract RTC values from Time channel packets (data type 0x11).
+    ///
+    /// Returns a list of (packet_index, rtc) pairs for all Time packets.
+    /// These are used as calibration points for RTC-to-IRIG-time correlation.
+    ///
+    /// Requirements traced:
+    ///   L1-STD-030  Parse all IRIG time formats
+    pub fn extract_time_rtcs(&self) -> Result<Vec<(usize, u64)>> {
+        let mut rtcs = Vec::new();
+
+        for (i, entry) in self.index.iter().enumerate() {
+            if entry.data_type == 0x11 {
+                let header = self.read_header(i)?;
+                rtcs.push((i, header.rtc));
+            }
+        }
+
+        Ok(rtcs)
+    }
+
+    /// Get entries for a specific channel, for iterating packet-by-packet.
+    pub fn packets_for_channel(&self, channel_id: u16) -> Vec<(usize, &crate::index::IndexEntry)> {
+        self.index
+            .iter()
+            .enumerate()
+            .filter(|(_, e)| e.channel_id == channel_id)
+            .collect()
+    }
 }
