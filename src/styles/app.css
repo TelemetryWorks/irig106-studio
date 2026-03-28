@@ -511,6 +511,11 @@
   margin-right: var(--sp-2);
   border-radius: 1px;
 }
+.waveform__zoom-hint {
+  margin-left: auto;
+  color: var(--c-text-disabled);
+  font-size: 9px;
+}
 
 /* ── Welcome / Empty state ── */
 .viewport-welcome {

@@ -42,6 +42,28 @@ export function createViewport(container: HTMLElement): {
   const hexData = new Uint8Array(512);
   for (let i = 0; i < hexData.length; i++) hexData[i] = (i * 7 + 13 + (i >> 3)) & 0xff;
 
+  // ── Waveform state ──
+  // Total simulated time span in seconds (2 seconds of data)
+  const WF_TOTAL_SEC = 2.0;
+  const WF_SAMPLE_COUNT = 4000;
+  // Precompute stable demo waveform samples
+  const wfData1553 = new Float32Array(WF_SAMPLE_COUNT); // digital-ish
+  const wfDataPcm = new Float32Array(WF_SAMPLE_COUNT);  // analog-ish
+  for (let i = 0; i < WF_SAMPLE_COUNT; i++) {
+    // 1553: digital square wave with jitter
+    const phase = (i * 0.05) + Math.sin(i * 0.007) * 2;
+    wfData1553[i] = Math.sign(Math.sin(phase)) * 0.8 + (((i * 37) % 100) / 500 - 0.1);
+    // PCM: sine + noise
+    wfDataPcm[i] = Math.sin(i * 0.015) * 0.35 + Math.sin(i * 0.073) * 0.15
+      + (((i * 13 + 7) % 100) / 250 - 0.2) * 0.3;
+  }
+
+  let wfZoom = 1.0;        // 1.0 = fit all, >1 = zoomed in
+  let wfPanNorm = 0.5;     // 0..1 = center of visible window in normalized coords
+  const WF_ZOOM_MIN = 1.0;
+  const WF_ZOOM_MAX = 32.0;
+  const WF_BASE_TIME = 14 * 3600 + 23 * 60 + 44; // 14:23:44 in seconds
+
   // Tab click handling
   tabBar.addEventListener("click", (e) => {
     const tabEl = (e.target as HTMLElement).closest("[data-tab]") as HTMLElement | null;
@@ -106,24 +128,202 @@ export function createViewport(container: HTMLElement): {
     content.innerHTML = `
       <div class="waveform">
         <canvas id="waveform-canvas" class="waveform__canvas"></canvas>
-        <div class="waveform__timescale">
-          <span>14:23:44.000</span>
-          <span>14:23:44.500</span>
-          <span>14:23:45.000</span>
-          <span>14:23:45.500</span>
-          <span>14:23:46.000</span>
-        </div>
+        <div class="waveform__timescale" id="wf-timescale"></div>
         <div class="waveform__legend">
-          <span><span class="waveform__legend-swatch" style="background:#3b8bdd"></span>Ch1 1553 Bus A</span>
-          <span><span class="waveform__legend-swatch" style="background:#1d9e75"></span>Ch3 PCM</span>
+          <span><span class="waveform__legend-swatch" style="background:var(--c-waveform-1553)"></span>Ch1 1553 Bus A</span>
+          <span><span class="waveform__legend-swatch" style="background:var(--c-waveform-pcm)"></span>Ch3 PCM</span>
+          <span class="waveform__zoom-hint">Scroll to zoom · drag to pan</span>
         </div>
       </div>
     `;
 
-    requestAnimationFrame(() => {
-      const canvas = content.querySelector("#waveform-canvas") as HTMLCanvasElement;
-      if (canvas) drawDemoWaveform(canvas);
+    const canvas = content.querySelector("#waveform-canvas") as HTMLCanvasElement;
+    if (!canvas) return;
+
+    let isPanning = false;
+    let panStartX = 0;
+    let panStartNorm = 0;
+
+    // Mouse wheel → zoom
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+      const oldZoom = wfZoom;
+      wfZoom = Math.max(WF_ZOOM_MIN, Math.min(WF_ZOOM_MAX, wfZoom * zoomFactor));
+
+      // Zoom toward mouse position
+      const rect = canvas.getBoundingClientRect();
+      const mouseNormX = (e.clientX - rect.left) / rect.width; // 0..1
+      const visibleFrac = 1 / wfZoom;
+      const oldLeft = wfPanNorm - (1 / oldZoom) / 2;
+      const mouseDataNorm = oldLeft + mouseNormX * (1 / oldZoom);
+      wfPanNorm = mouseDataNorm - mouseNormX * visibleFrac + visibleFrac / 2;
+
+      clampPan();
+      drawWaveform(canvas);
+    }, { passive: false });
+
+    // Click-drag → pan
+    canvas.addEventListener("mousedown", (e) => {
+      if (wfZoom <= WF_ZOOM_MIN) return;
+      isPanning = true;
+      panStartX = e.clientX;
+      panStartNorm = wfPanNorm;
+      canvas.style.cursor = "grabbing";
     });
+
+    document.addEventListener("mousemove", (e) => {
+      if (!isPanning) return;
+      const rect = canvas.getBoundingClientRect();
+      const dx = e.clientX - panStartX;
+      const dataDx = -(dx / rect.width) * (1 / wfZoom);
+      wfPanNorm = panStartNorm + dataDx;
+      clampPan();
+      drawWaveform(canvas);
+    });
+
+    document.addEventListener("mouseup", () => {
+      if (isPanning) {
+        isPanning = false;
+        canvas.style.cursor = wfZoom > WF_ZOOM_MIN ? "grab" : "default";
+      }
+    });
+
+    // Set initial cursor
+    canvas.style.cursor = wfZoom > WF_ZOOM_MIN ? "grab" : "default";
+
+    requestAnimationFrame(() => drawWaveform(canvas));
+  }
+
+  function clampPan() {
+    const halfVisible = (1 / wfZoom) / 2;
+    wfPanNorm = Math.max(halfVisible, Math.min(1 - halfVisible, wfPanNorm));
+    // At zoom=1, snap to 0.5
+    if (wfZoom <= WF_ZOOM_MIN) wfPanNorm = 0.5;
+  }
+
+  /** Compute the visible data window as [startFrac, endFrac] in 0..1 */
+  function visibleWindow(): [number, number] {
+    const halfVisible = (1 / wfZoom) / 2;
+    return [wfPanNorm - halfVisible, wfPanNorm + halfVisible];
+  }
+
+  function updateTimescale() {
+    const el = content.querySelector("#wf-timescale");
+    if (!el) return;
+    const [startFrac, endFrac] = visibleWindow();
+    const labels: string[] = [];
+    const count = 5;
+    for (let i = 0; i < count; i++) {
+      const frac = startFrac + (endFrac - startFrac) * (i / (count - 1));
+      const sec = WF_BASE_TIME + frac * WF_TOTAL_SEC;
+      labels.push(`<span>${formatTimeSec(sec)}</span>`);
+    }
+    el.innerHTML = labels.join("");
+  }
+
+  function drawWaveform(canvas: HTMLCanvasElement) {
+    const parent = canvas.parentElement!;
+    const rect = parent.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    const cw = rect.width;
+    const ch = rect.height - 46; // timescale + legend
+    canvas.width = cw * dpr;
+    canvas.height = ch * dpr;
+    canvas.style.width = `${cw}px`;
+    canvas.style.height = `${ch}px`;
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(dpr, dpr);
+
+    // Theme colors
+    const cs = getComputedStyle(document.documentElement);
+    const cv = (name: string, fb: string) => cs.getPropertyValue(name).trim() || fb;
+    const bgColor = cv("--c-surface", "#222226");
+    const gridH = cv("--c-waveform-grid", "rgba(255,255,255,0.05)");
+    const gridV = cv("--c-waveform-grid-v", "rgba(255,255,255,0.04)");
+    const c1553 = cv("--c-waveform-1553", "#3b8bdd");
+    const cPcm = cv("--c-waveform-pcm", "#1d9e75");
+    const cPlay = cv("--c-playhead", "#e24b4a");
+
+    // Background
+    ctx.fillStyle = bgColor;
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Grid — horizontal
+    ctx.strokeStyle = gridH;
+    ctx.lineWidth = 0.5;
+    for (let y = ch / 4; y < ch; y += ch / 4) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+    }
+    // Grid — vertical dashed
+    ctx.strokeStyle = gridV;
+    ctx.setLineDash([2, 4]);
+    for (let x = cw / 5; x < cw; x += cw / 5) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Visible data window
+    const [startFrac, endFrac] = visibleWindow();
+    const startSample = Math.floor(startFrac * WF_SAMPLE_COUNT);
+    const endSample = Math.ceil(endFrac * WF_SAMPLE_COUNT);
+    const visibleSamples = endSample - startSample;
+
+    const mid = ch / 2;
+    const amp = ch * 0.35;
+
+    // Draw 1553 signal
+    ctx.strokeStyle = c1553;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let px = 0; px < cw; px++) {
+      const sampleIdx = startSample + (px / cw) * visibleSamples;
+      const idx = Math.min(WF_SAMPLE_COUNT - 1, Math.max(0, Math.round(sampleIdx)));
+      const y = mid - wfData1553[idx] * amp;
+      if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+    }
+    ctx.stroke();
+
+    // Draw PCM signal
+    ctx.strokeStyle = cPcm;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath();
+    for (let px = 0; px < cw; px++) {
+      const sampleIdx = startSample + (px / cw) * visibleSamples;
+      const idx = Math.min(WF_SAMPLE_COUNT - 1, Math.max(0, Math.round(sampleIdx)));
+      const y = mid - wfDataPcm[idx] * amp;
+      if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1.0;
+
+    // Playhead at center of visible window
+    const phX = cw * 0.5;
+    ctx.strokeStyle = cPlay;
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.8;
+    ctx.beginPath(); ctx.moveTo(phX, 0); ctx.lineTo(phX, ch); ctx.stroke();
+    ctx.fillStyle = cPlay;
+    ctx.beginPath(); ctx.moveTo(phX - 4, 0); ctx.lineTo(phX + 4, 0); ctx.lineTo(phX, 7); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha = 1.0;
+
+    // Zoom indicator (top-right)
+    if (wfZoom > WF_ZOOM_MIN) {
+      const zoomText = `${Math.round(wfZoom)}x`;
+      ctx.font = "10px " + cv("--font-mono", "monospace");
+      ctx.fillStyle = cv("--c-text-tertiary", "#6b6a62");
+      ctx.textAlign = "right";
+      ctx.fillText(zoomText, cw - 8, 14);
+      ctx.textAlign = "start";
+    }
+
+    // Update timescale
+    updateTimescale();
+
+    // Update cursor
+    canvas.style.cursor = wfZoom > WF_ZOOM_MIN ? "grab" : "default";
   }
 
   function renderHex() {
@@ -290,7 +490,7 @@ export function createViewport(container: HTMLElement): {
   function resize() {
     if (activeTab === "waveform") {
       const canvas = content.querySelector("#waveform-canvas") as HTMLCanvasElement;
-      if (canvas) drawDemoWaveform(canvas);
+      if (canvas) drawWaveform(canvas);
     }
   }
 
@@ -310,112 +510,18 @@ export function createViewport(container: HTMLElement): {
   };
 }
 
-// ── Waveform drawing ──
-
-function drawDemoWaveform(canvas: HTMLCanvasElement) {
-  const rect = canvas.parentElement!.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = rect.width * dpr;
-  canvas.height = (rect.height - 40) * dpr;
-  canvas.style.width = `${rect.width}px`;
-  canvas.style.height = `${rect.height - 40}px`;
-
-  const ctx = canvas.getContext("2d")!;
-  ctx.scale(dpr, dpr);
-  const w = rect.width;
-  const h = rect.height - 40;
-
-  // Read theme-aware colors from CSS variables
-  const cs = getComputedStyle(document.documentElement);
-  const cv = (name: string, fallback: string) => cs.getPropertyValue(name).trim() || fallback;
-
-  const bgColor    = cv("--c-surface",        "#222226");
-  const gridColor  = cv("--c-waveform-grid",   "rgba(255,255,255,0.05)");
-  const gridColorV = cv("--c-waveform-grid-v", "rgba(255,255,255,0.04)");
-  const c1553      = cv("--c-waveform-1553",   "#3b8bdd");
-  const cPcm       = cv("--c-waveform-pcm",    "#1d9e75");
-  const cPlayhead  = cv("--c-playhead",         "#e24b4a");
-
-  // Background
-  ctx.fillStyle = bgColor;
-  ctx.fillRect(0, 0, w, h);
-
-  // Grid — horizontal
-  ctx.strokeStyle = gridColor;
-  ctx.lineWidth = 0.5;
-  for (let y = 0; y < h; y += h / 4) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(w, y);
-    ctx.stroke();
-  }
-  // Grid — vertical (dashed)
-  ctx.strokeStyle = gridColorV;
-  ctx.setLineDash([2, 4]);
-  for (let x = 0; x < w; x += w / 5) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, h);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  // 1553 digital waveform
-  ctx.strokeStyle = c1553;
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  const mid = h / 2;
-  const amp = h * 0.3;
-  let x = 0;
-  ctx.moveTo(x, mid);
-  while (x < w) {
-    const high = Math.random() > 0.5;
-    const pulseWidth = 8 + Math.random() * 12;
-    ctx.lineTo(x, mid);
-    ctx.lineTo(x, high ? mid - amp : mid + amp);
-    x += pulseWidth;
-    ctx.lineTo(x, high ? mid - amp : mid + amp);
-    ctx.lineTo(x, mid);
-    x += 2 + Math.random() * 4;
-  }
-  ctx.stroke();
-
-  // PCM analog overlay
-  ctx.strokeStyle = cPcm;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.6;
-  ctx.beginPath();
-  for (let px = 0; px < w; px += 2) {
-    const y = mid + Math.sin(px * 0.03) * amp * 0.4 + (Math.random() - 0.5) * 20;
-    if (px === 0) ctx.moveTo(px, y);
-    else ctx.lineTo(px, y);
-  }
-  ctx.stroke();
-  ctx.globalAlpha = 1.0;
-
-  // Playhead
-  const phX = w * 0.5;
-  ctx.strokeStyle = cPlayhead;
-  ctx.lineWidth = 1;
-  ctx.globalAlpha = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(phX, 0);
-  ctx.lineTo(phX, h);
-  ctx.stroke();
-
-  // Playhead triangle
-  ctx.fillStyle = cPlayhead;
-  ctx.beginPath();
-  ctx.moveTo(phX - 4, 0);
-  ctx.lineTo(phX + 4, 0);
-  ctx.lineTo(phX, 7);
-  ctx.closePath();
-  ctx.fill();
-  ctx.globalAlpha = 1.0;
-}
+// ── Helpers ──
 
 function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** Format seconds-of-day to HH:MM:SS.mmm */
+function formatTimeSec(sec: number): string {
+  const h = Math.floor(sec / 3600) % 24;
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${s.toFixed(3).padStart(6, "0")}`;
 }
 
 function tabLabel(tab: ViewportTab): string {
