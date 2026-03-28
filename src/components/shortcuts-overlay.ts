@@ -38,7 +38,7 @@ export function showShortcutsOverlay(): void {
   }
 
   // Force reflow before adding visible class for transition
-  overlayEl.offsetHeight;
+  void overlayEl.offsetHeight;
   overlayEl.classList.add("shortcuts-overlay--visible");
 
   // Dismiss on Escape

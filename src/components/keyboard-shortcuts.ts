@@ -63,6 +63,7 @@ export const KEYMAP: Shortcut[] = [
   // Navigation — channels
   { action: "nav.channel.up",     label: "Previous channel",      category: "navigation", key: "ArrowUp",   alt: true },
   { action: "nav.channel.down",   label: "Next channel",          category: "navigation", key: "ArrowDown", alt: true },
+  { action: "nav.filter",         label: "Filter channels",       category: "navigation", key: "/" },
 
   // App
   { action: "app.shortcuts",      label: "Show keyboard shortcuts",category: "app",       key: "?" },

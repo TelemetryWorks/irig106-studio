@@ -341,6 +341,39 @@
   transform: rotate(90deg);
 }
 
+/* ── Channel tree filter ── */
+.tree-filter {
+  padding: var(--sp-2) var(--sp-3);
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-border-subtle);
+}
+.tree-filter__input {
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: var(--fs-sm);
+  color: var(--c-text-primary);
+  background: var(--c-inset);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+  outline: none;
+  transition: border-color var(--t-fast);
+}
+.tree-filter__input:focus {
+  border-color: var(--c-accent);
+}
+.tree-filter__input::placeholder {
+  color: var(--c-text-disabled);
+}
+
+.tree-label {
+  color: var(--c-text-tertiary);
+  font-size: var(--fs-xs);
+  margin-left: var(--sp-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Data type badge ── */
 .badge {
   font-size: 9px;
@@ -458,6 +491,50 @@
   vertical-align: middle;
   margin-right: var(--sp-2);
   border-radius: 1px;
+}
+
+/* ── Welcome / Empty state ── */
+.viewport-welcome {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-4);
+  padding: 40px;
+  text-align: center;
+}
+.viewport-welcome__icon {
+  opacity: 0.6;
+  margin-bottom: var(--sp-4);
+}
+.viewport-welcome__title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--c-text-secondary);
+}
+.viewport-welcome__hint {
+  font-size: var(--fs-base);
+  color: var(--c-text-tertiary);
+  line-height: 1.6;
+}
+.viewport-welcome__hint strong {
+  color: var(--c-text-secondary);
+  font-weight: 500;
+}
+.viewport-welcome__shortcuts {
+  font-size: var(--fs-sm);
+  color: var(--c-text-disabled);
+  margin-top: var(--sp-4);
+}
+.viewport-welcome__kbd {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--c-text-secondary);
+  background: var(--c-raised);
+  border: 1px solid var(--c-border-default);
+  border-radius: var(--r-sm);
+  padding: 1px 5px;
 }
 
 /* ── Console ── */

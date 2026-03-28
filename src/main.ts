@@ -75,7 +75,7 @@ function main() {
 
   // ── Application state ──
   let currentSummary: Ch10Summary | null = null;
-  let selectedChannel: Channel | null = null;
+  let _selectedChannel: Channel | null = null;
   let selectedChannelIndex = 0;
 
   // ── Theme initialization ──
@@ -153,7 +153,7 @@ function main() {
   // ────────────────────────────────────────────
 
   function handleChannelSelect(channel: Channel) {
-    selectedChannel = channel;
+    _selectedChannel = channel;
     props.setChannel(channel);
 
     // Update the selected index for up/down navigation
@@ -259,6 +259,10 @@ function main() {
       navigateChannel(1);
       return;
     }
+    if (action === "nav.filter") {
+      tree.toggleFilter();
+      return;
+    }
 
     // Help overlay
     if (action === "app.shortcuts") {
@@ -319,10 +323,11 @@ function main() {
   initPanelResize(bottomEl, "row", "top");
 
   // ────────────────────────────────────────────
-  // Auto-open (demo mode)
+  // Startup
   // ────────────────────────────────────────────
 
-  setTimeout(() => openFile(), 300);
+  bottom.addLog({ timestamp: now(), level: "info", message: "IRIG106-Studio v0.1.0 ready" });
+  bottom.addLog({ timestamp: now(), level: "info", message: "Drop a .ch10 file or press Ctrl+O to begin" });
 
   console.log(`[IRIG106-Studio] Platform: ${platform.name}`);
   console.log(`[IRIG106-Studio] Press ? for keyboard shortcuts`);

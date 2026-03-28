@@ -1,3 +1,4 @@
+/// <reference types="vitest" />
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -27,5 +28,10 @@ export default defineConfig({
     alias: {
       "@": "/src",
     },
+  },
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/*.test.ts"],
+    globals: true,
   },
 });

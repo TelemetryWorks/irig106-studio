@@ -52,6 +52,10 @@ export function createViewport(container: HTMLElement): {
   }
 
   function renderContent() {
+    if (!summary) {
+      renderWelcome();
+      return;
+    }
     switch (activeTab) {
       case "waveform":
         renderWaveform();
@@ -66,6 +70,30 @@ export function createViewport(container: HTMLElement): {
         renderTmats();
         break;
     }
+  }
+
+  function renderWelcome() {
+    content.innerHTML = `
+      <div class="viewport-welcome">
+        <div class="viewport-welcome__icon">
+          <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
+            <rect x="10" y="6" width="36" height="44" rx="4" stroke="var(--c-text-tertiary)" stroke-width="1.5" fill="none"/>
+            <path d="M20 22h16M20 28h16M20 34h10" stroke="var(--c-text-tertiary)" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="40" cy="42" r="11" fill="var(--c-accent)" stroke="var(--c-surface)" stroke-width="2"/>
+            <path d="M36.5 42h7M40 38.5v7" stroke="var(--c-surface)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="viewport-welcome__title">No file open</div>
+        <div class="viewport-welcome__hint">
+          Drop a <strong>.ch10</strong> file here or press
+          <kbd class="viewport-welcome__kbd">${isMac() ? "⌘" : "Ctrl"}+O</kbd>
+          to open
+        </div>
+        <div class="viewport-welcome__shortcuts">
+          Press <kbd class="viewport-welcome__kbd">?</kbd> for keyboard shortcuts
+        </div>
+      </div>
+    `;
   }
 
   function renderWaveform() {
@@ -297,4 +325,8 @@ function tabLabel(tab: ViewportTab): string {
     tmats: "TMATS",
   };
   return labels[tab];
+}
+
+function isMac(): boolean {
+  return navigator.platform?.includes("Mac") ?? false;
 }

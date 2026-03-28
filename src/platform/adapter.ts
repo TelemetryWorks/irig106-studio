@@ -105,7 +105,7 @@ class MockAdapter implements PlatformAdapter {
         dataLength: 64 + (idx % 192),
         dataTypeVersion: 1,
         sequenceNumber: idx % 256,
-        dataType: [0x19, 0x19, 0x09, 0x11, 0x40][idx % 5] as any,
+        dataType: ([0x19, 0x19, 0x09, 0x11, 0x40] as number[])[idx % 5],
         rtc: BigInt(idx * 100_000),
         checksumValid: idx % 47 !== 0, // occasional invalid
         fileOffset: idx * 384,
@@ -130,7 +130,7 @@ class MockAdapter implements PlatformAdapter {
 
 // ── Tauri adapter (stub — filled in when backend crates are ready) ──
 
-class TauriAdapter implements PlatformAdapter {
+export class TauriAdapter implements PlatformAdapter {
   readonly name = "tauri" as const;
 
   async openFile(): Promise<Ch10Summary | null> {
