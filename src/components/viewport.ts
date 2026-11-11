@@ -30,12 +30,16 @@ export function createViewport(container: HTMLElement): {
 
   container.innerHTML = `
     <div class="tab-bar" id="viewport-tabs" role="tablist" aria-label="Viewport tabs">
-      ${tabs.map((t) => `
+      ${tabs
+        .map(
+          (t) => `
         <span class="tab-bar__tab${t === "waveform" ? " tab-bar__tab--active" : ""}" data-tab="${t}"
               role="tab" aria-selected="${t === "waveform" ? "true" : "false"}" tabindex="${t === "waveform" ? "0" : "-1"}">
           ${tabLabel(t)}
         </span>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </div>
     <div id="viewport-content" role="tabpanel" aria-label="Viewport content" style="flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden"></div>
   `;
@@ -65,8 +69,14 @@ export function createViewport(container: HTMLElement): {
 
   /** Color palette for plotted channels (cycles if >8 channels). */
   const WF_COLORS = [
-    "#3b8bdd", "#1d9e75", "#d4a026", "#e24b4a",
-    "#b07cd8", "#d8856e", "#6eb8d8", "#7bc378",
+    "#3b8bdd",
+    "#1d9e75",
+    "#d4a026",
+    "#e24b4a",
+    "#b07cd8",
+    "#d8856e",
+    "#6eb8d8",
+    "#7bc378",
   ];
 
   const plottedChannels: PlottedChannel[] = [];
@@ -75,9 +85,9 @@ export function createViewport(container: HTMLElement): {
   function generateDemoData(channelId: number): Float32Array {
     const data = new Float32Array(WF_SAMPLE_COUNT);
     // Use channelId as a seed for deterministic, unique waveforms
-    const freq1 = 0.01 + (channelId * 0.007) % 0.04;
-    const freq2 = 0.05 + (channelId * 0.013) % 0.08;
-    const freq3 = 0.002 + (channelId * 0.003) % 0.01;
+    const freq1 = 0.01 + ((channelId * 0.007) % 0.04);
+    const freq2 = 0.05 + ((channelId * 0.013) % 0.08);
+    const freq3 = 0.002 + ((channelId * 0.003) % 0.01);
     const amp1 = 0.3 + (channelId % 5) * 0.1;
     const amp2 = 0.1 + (channelId % 3) * 0.08;
     const isDigital = channelId % 3 === 0;
@@ -85,12 +95,12 @@ export function createViewport(container: HTMLElement): {
     for (let i = 0; i < WF_SAMPLE_COUNT; i++) {
       if (isDigital) {
         const phase = i * freq2 + Math.sin(i * freq3) * 2;
-        data[i] = Math.sign(Math.sin(phase)) * amp1
-          + (((i * (channelId + 37)) % 100) / 500 - 0.1);
+        data[i] = Math.sign(Math.sin(phase)) * amp1 + (((i * (channelId + 37)) % 100) / 500 - 0.1);
       } else {
-        data[i] = Math.sin(i * freq1) * amp1
-          + Math.sin(i * freq2) * amp2
-          + (((i * (channelId + 13)) % 100) / 250 - 0.2) * 0.2;
+        data[i] =
+          Math.sin(i * freq1) * amp1 +
+          Math.sin(i * freq2) * amp2 +
+          (((i * (channelId + 13)) % 100) / 250 - 0.2) * 0.2;
       }
     }
     return data;
@@ -190,27 +200,35 @@ export function createViewport(container: HTMLElement): {
 
   function renderWaveform() {
     // Build dynamic legend
-    const legendItems = plottedChannels.map((pc) =>
-      `<span class="waveform__legend-item" data-remove-ch="${pc.channelId}" title="Click to remove">` +
-      `<span class="waveform__legend-swatch" style="background:${pc.color}"></span>` +
-      `Ch${pc.channelId} ${escHtml(pc.label)}` +
-      `<span class="waveform__legend-x">✕</span>` +
-      `</span>`
-    ).join("");
+    const legendItems = plottedChannels
+      .map(
+        (pc) =>
+          `<span class="waveform__legend-item" data-remove-ch="${pc.channelId}" title="Click to remove">` +
+          `<span class="waveform__legend-swatch" style="background:${pc.color}"></span>` +
+          `Ch${pc.channelId} ${escHtml(pc.label)}` +
+          `<span class="waveform__legend-x">✕</span>` +
+          `</span>`,
+      )
+      .join("");
 
-    const emptyHint = plottedChannels.length === 0
-      ? `<span class="waveform__drop-hint">Drag channels here to plot</span>`
-      : "";
+    const emptyHint =
+      plottedChannels.length === 0
+        ? `<span class="waveform__drop-hint">Drag channels here to plot</span>`
+        : "";
 
     content.innerHTML = `
       <div class="waveform" id="wf-drop-zone">
         <canvas id="waveform-canvas" class="waveform__canvas"></canvas>
-        ${plottedChannels.length === 0 ? `
+        ${
+          plottedChannels.length === 0
+            ? `
           <div class="waveform__empty">
             <div style="color:var(--c-text-tertiary);font-size:12px;margin-bottom:4px">No channels plotted</div>
             <div style="color:var(--c-text-disabled);font-size:11px">Drag a channel from the sidebar onto this area</div>
           </div>
-        ` : ""}
+        `
+            : ""
+        }
         <div class="waveform__timescale" id="wf-timescale"></div>
         <div class="waveform__legend">
           ${legendItems}${emptyHint}
@@ -257,7 +275,9 @@ export function createViewport(container: HTMLElement): {
         if (ch && typeof ch.channelId === "number") {
           addPlottedChannel(ch.channelId, ch.label || `Ch ${ch.channelId}`);
         }
-      } catch { /* ignore bad data */ }
+      } catch {
+        /* ignore bad data */
+      }
     });
 
     // ── Legend click-to-remove ──
@@ -273,22 +293,26 @@ export function createViewport(container: HTMLElement): {
     let panStartX = 0;
     let panStartNorm = 0;
 
-    canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
-      const oldZoom = wfZoom;
-      wfZoom = Math.max(WF_ZOOM_MIN, Math.min(WF_ZOOM_MAX, wfZoom * zoomFactor));
+    canvas.addEventListener(
+      "wheel",
+      (e) => {
+        e.preventDefault();
+        const zoomFactor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+        const oldZoom = wfZoom;
+        wfZoom = Math.max(WF_ZOOM_MIN, Math.min(WF_ZOOM_MAX, wfZoom * zoomFactor));
 
-      const rect = canvas.getBoundingClientRect();
-      const mouseNormX = (e.clientX - rect.left) / rect.width;
-      const visibleFrac = 1 / wfZoom;
-      const oldLeft = wfPanNorm - (1 / oldZoom) / 2;
-      const mouseDataNorm = oldLeft + mouseNormX * (1 / oldZoom);
-      wfPanNorm = mouseDataNorm - mouseNormX * visibleFrac + visibleFrac / 2;
+        const rect = canvas.getBoundingClientRect();
+        const mouseNormX = (e.clientX - rect.left) / rect.width;
+        const visibleFrac = 1 / wfZoom;
+        const oldLeft = wfPanNorm - 1 / oldZoom / 2;
+        const mouseDataNorm = oldLeft + mouseNormX * (1 / oldZoom);
+        wfPanNorm = mouseDataNorm - mouseNormX * visibleFrac + visibleFrac / 2;
 
-      clampPan();
-      drawWaveform(canvas);
-    }, { passive: false });
+        clampPan();
+        drawWaveform(canvas);
+      },
+      { passive: false },
+    );
 
     canvas.addEventListener("mousedown", (e) => {
       if (wfZoom <= WF_ZOOM_MIN) return;
@@ -320,7 +344,7 @@ export function createViewport(container: HTMLElement): {
   }
 
   function clampPan() {
-    const halfVisible = (1 / wfZoom) / 2;
+    const halfVisible = 1 / wfZoom / 2;
     wfPanNorm = Math.max(halfVisible, Math.min(1 - halfVisible, wfPanNorm));
     // At zoom=1, snap to 0.5
     if (wfZoom <= WF_ZOOM_MIN) wfPanNorm = 0.5;
@@ -328,7 +352,7 @@ export function createViewport(container: HTMLElement): {
 
   /** Compute the visible data window as [startFrac, endFrac] in 0..1 */
   function visibleWindow(): [number, number] {
-    const halfVisible = (1 / wfZoom) / 2;
+    const halfVisible = 1 / wfZoom / 2;
     return [wfPanNorm - halfVisible, wfPanNorm + halfVisible];
   }
 
@@ -376,13 +400,19 @@ export function createViewport(container: HTMLElement): {
     ctx.strokeStyle = gridH;
     ctx.lineWidth = 0.5;
     for (let y = ch / 4; y < ch; y += ch / 4) {
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(cw, y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(cw, y);
+      ctx.stroke();
     }
     // Grid — vertical dashed
     ctx.strokeStyle = gridV;
     ctx.setLineDash([2, 4]);
     for (let x = cw / 5; x < cw; x += cw / 5) {
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, ch); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, ch);
+      ctx.stroke();
     }
     ctx.setLineDash([]);
 
@@ -406,7 +436,8 @@ export function createViewport(container: HTMLElement): {
         const sampleIdx = startSample + (px / cw) * visibleSamples;
         const idx = Math.min(WF_SAMPLE_COUNT - 1, Math.max(0, Math.round(sampleIdx)));
         const y = mid - pc.data[idx] * amp;
-        if (px === 0) ctx.moveTo(px, y); else ctx.lineTo(px, y);
+        if (px === 0) ctx.moveTo(px, y);
+        else ctx.lineTo(px, y);
       }
       ctx.stroke();
     }
@@ -417,9 +448,17 @@ export function createViewport(container: HTMLElement): {
     ctx.strokeStyle = cPlay;
     ctx.lineWidth = 1;
     ctx.globalAlpha = 0.8;
-    ctx.beginPath(); ctx.moveTo(phX, 0); ctx.lineTo(phX, ch); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(phX, 0);
+    ctx.lineTo(phX, ch);
+    ctx.stroke();
     ctx.fillStyle = cPlay;
-    ctx.beginPath(); ctx.moveTo(phX - 4, 0); ctx.lineTo(phX + 4, 0); ctx.lineTo(phX, 7); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(phX - 4, 0);
+    ctx.lineTo(phX + 4, 0);
+    ctx.lineTo(phX, 7);
+    ctx.closePath();
+    ctx.fill();
     ctx.globalAlpha = 1.0;
 
     // Zoom indicator (top-right)
@@ -454,11 +493,11 @@ export function createViewport(container: HTMLElement): {
         const byte = hexData[offset];
         const sel = offset === hexSelectedOffset ? " hex-byte--selected" : "";
         hexCells.push(
-          `<span class="hex-byte${sel}" data-hex-offset="${offset}">${byte.toString(16).padStart(2, "0")}</span>`
+          `<span class="hex-byte${sel}" data-hex-offset="${offset}">${byte.toString(16).padStart(2, "0")}</span>`,
         );
         const ch = byte >= 0x20 && byte <= 0x7e ? String.fromCharCode(byte) : "·";
         asciiCells.push(
-          `<span class="hex-ascii${sel}" data-ascii-offset="${offset}">${escHtml(ch)}</span>`
+          `<span class="hex-ascii${sel}" data-ascii-offset="${offset}">${escHtml(ch)}</span>`,
         );
       }
 
@@ -468,10 +507,10 @@ export function createViewport(container: HTMLElement): {
 
       rows.push(
         `<div class="hex-row">` +
-        `<span class="hex-addr">${addr.toString(16).padStart(8, "0")}</span>` +
-        `<span class="hex-cells">${hexLeft}  ${hexRight}</span>` +
-        `<span class="hex-ascii-col">${asciiCells.join("")}</span>` +
-        `</div>`
+          `<span class="hex-addr">${addr.toString(16).padStart(8, "0")}</span>` +
+          `<span class="hex-cells">${hexLeft}  ${hexRight}</span>` +
+          `<span class="hex-ascii-col">${asciiCells.join("")}</span>` +
+          `</div>`,
       );
     }
 
@@ -498,13 +537,26 @@ export function createViewport(container: HTMLElement): {
 
       let next: number;
       switch (e.key) {
-        case "ArrowRight": next = Math.min(totalBytes - 1, hexSelectedOffset + 1); break;
-        case "ArrowLeft":  next = Math.max(0, hexSelectedOffset - 1); break;
-        case "ArrowDown":  next = Math.min(totalBytes - 1, hexSelectedOffset + bytesPerRow); break;
-        case "ArrowUp":    next = Math.max(0, hexSelectedOffset - bytesPerRow); break;
-        case "Home":       next = 0; break;
-        case "End":        next = totalBytes - 1; break;
-        default: return; // don't prevent default for other keys
+        case "ArrowRight":
+          next = Math.min(totalBytes - 1, hexSelectedOffset + 1);
+          break;
+        case "ArrowLeft":
+          next = Math.max(0, hexSelectedOffset - 1);
+          break;
+        case "ArrowDown":
+          next = Math.min(totalBytes - 1, hexSelectedOffset + bytesPerRow);
+          break;
+        case "ArrowUp":
+          next = Math.max(0, hexSelectedOffset - bytesPerRow);
+          break;
+        case "Home":
+          next = 0;
+          break;
+        case "End":
+          next = totalBytes - 1;
+          break;
+        default:
+          return; // don't prevent default for other keys
       }
 
       e.preventDefault();
@@ -537,10 +589,10 @@ export function createViewport(container: HTMLElement): {
   }
 
   // ── Packet virtual scroll state ──
-  const PKT_ROW_H = 24;       // px per row
-  const PKT_HEADER_H = 28;    // sticky header height
-  const PKT_BUFFER = 10;      // extra rows above/below viewport
-  const PKT_BATCH = 100;      // fetch this many at a time
+  const PKT_ROW_H = 24; // px per row
+  const PKT_HEADER_H = 28; // sticky header height
+  const PKT_BUFFER = 10; // extra rows above/below viewport
+  const PKT_BATCH = 100; // fetch this many at a time
   let pktCache: { start: number; headers: PacketHeader[] } = { start: 0, headers: [] };
   let pktScrollRAF = 0;
   let pktSelectedIndex = -1;
@@ -593,9 +645,9 @@ export function createViewport(container: HTMLElement): {
       const row = (e.target as HTMLElement).closest("[data-pkt-idx]") as HTMLElement | null;
       if (!row) return;
       pktSelectedIndex = parseInt(row.dataset.pktIdx!, 10);
-      viewportEl.querySelectorAll(".pkt-row--selected").forEach((r) =>
-        r.classList.remove("pkt-row--selected")
-      );
+      viewportEl
+        .querySelectorAll(".pkt-row--selected")
+        .forEach((r) => r.classList.remove("pkt-row--selected"));
       row.classList.add("pkt-row--selected");
     });
 
@@ -607,7 +659,7 @@ export function createViewport(container: HTMLElement): {
     bodyEl: HTMLElement,
     viewportEl: HTMLElement,
     statusEl: HTMLElement,
-    totalPackets: number
+    totalPackets: number,
   ) {
     const scrollTop = bodyEl.scrollTop;
     const viewHeight = bodyEl.clientHeight - PKT_HEADER_H;
@@ -648,14 +700,14 @@ export function createViewport(container: HTMLElement): {
         const badge = dataTypeBadge(h.dataType);
         rows.push(
           `<div class="pkt-row${selected}" data-pkt-idx="${i}" style="top:${i * PKT_ROW_H}px">` +
-          `<span class="pkt-col pkt-col--idx">${i.toLocaleString()}</span>` +
-          `<span class="pkt-col pkt-col--offset">0x${h.fileOffset.toString(16).toUpperCase().padStart(8, "0")}</span>` +
-          `<span class="pkt-col pkt-col--ch">${h.channelId}</span>` +
-          `<span class="pkt-col pkt-col--type"><span class="badge ${badge.css}">${badge.label}</span></span>` +
-          `<span class="pkt-col pkt-col--len">${h.dataLength}</span>` +
-          `<span class="pkt-col pkt-col--seq">${h.sequenceNumber}</span>` +
-          `<span class="pkt-col pkt-col--crc" style="color:${h.checksumValid ? "var(--c-success)" : "var(--c-danger)"}">${h.checksumValid ? "✓" : "✗"}</span>` +
-          `</div>`
+            `<span class="pkt-col pkt-col--idx">${i.toLocaleString()}</span>` +
+            `<span class="pkt-col pkt-col--offset">0x${h.fileOffset.toString(16).toUpperCase().padStart(8, "0")}</span>` +
+            `<span class="pkt-col pkt-col--ch">${h.channelId}</span>` +
+            `<span class="pkt-col pkt-col--type"><span class="badge ${badge.css}">${badge.label}</span></span>` +
+            `<span class="pkt-col pkt-col--len">${h.dataLength}</span>` +
+            `<span class="pkt-col pkt-col--seq">${h.sequenceNumber}</span>` +
+            `<span class="pkt-col pkt-col--crc" style="color:${h.checksumValid ? "var(--c-success)" : "var(--c-danger)"}">${h.checksumValid ? "✓" : "✗"}</span>` +
+            `</div>`,
         );
       } else {
         // Fallback: synthetic data when cache doesn't cover this row
@@ -663,14 +715,14 @@ export function createViewport(container: HTMLElement): {
         const crcOk = i % 47 !== 0;
         rows.push(
           `<div class="pkt-row${selected}" data-pkt-idx="${i}" style="top:${i * PKT_ROW_H}px">` +
-          `<span class="pkt-col pkt-col--idx">${i.toLocaleString()}</span>` +
-          `<span class="pkt-col pkt-col--offset">0x${(i * 384).toString(16).toUpperCase().padStart(8, "0")}</span>` +
-          `<span class="pkt-col pkt-col--ch">${(t + 1)}</span>` +
-          `<span class="pkt-col pkt-col--type"><span class="badge ${badges[t]}">${types[t]}</span></span>` +
-          `<span class="pkt-col pkt-col--len">${64 + (i % 192)}</span>` +
-          `<span class="pkt-col pkt-col--seq">${i % 256}</span>` +
-          `<span class="pkt-col pkt-col--crc" style="color:${crcOk ? "var(--c-success)" : "var(--c-danger)"}">${crcOk ? "✓" : "✗"}</span>` +
-          `</div>`
+            `<span class="pkt-col pkt-col--idx">${i.toLocaleString()}</span>` +
+            `<span class="pkt-col pkt-col--offset">0x${(i * 384).toString(16).toUpperCase().padStart(8, "0")}</span>` +
+            `<span class="pkt-col pkt-col--ch">${t + 1}</span>` +
+            `<span class="pkt-col pkt-col--type"><span class="badge ${badges[t]}">${types[t]}</span></span>` +
+            `<span class="pkt-col pkt-col--len">${64 + (i % 192)}</span>` +
+            `<span class="pkt-col pkt-col--seq">${i % 256}</span>` +
+            `<span class="pkt-col pkt-col--crc" style="color:${crcOk ? "var(--c-success)" : "var(--c-danger)"}">${crcOk ? "✓" : "✗"}</span>` +
+            `</div>`,
         );
       }
     }
@@ -726,10 +778,14 @@ export function createViewport(container: HTMLElement): {
     setSummary,
     setActiveTab,
     resize,
-    onHexSelect(cb: (offset: number) => void) { hexSelectCb = cb; },
+    onHexSelect(cb: (offset: number) => void) {
+      hexSelectCb = cb;
+    },
     addPlottedChannel,
     removePlottedChannel,
-    setPacketFetcher(fetcher: PacketFetcher) { packetFetcher = fetcher; },
+    setPacketFetcher(fetcher: PacketFetcher) {
+      packetFetcher = fetcher;
+    },
   };
 }
 

@@ -47,13 +47,13 @@ function main() {
   const platform = getPlatform();
 
   // ── Build DOM skeleton ──
-  const toolbarEl   = el("div");
-  const sidebarEl   = el("div");
+  const toolbarEl = el("div");
+  const sidebarEl = el("div");
   const centerColEl = el("div", "center-col");
-  const viewportEl  = el("div");
-  const bottomEl    = el("div");
-  const propsEl     = el("div");
-  const mainEl      = el("div", "main");
+  const viewportEl = el("div");
+  const bottomEl = el("div");
+  const propsEl = el("div");
+  const mainEl = el("div", "main");
   const statusBarEl = el("div");
 
   centerColEl.appendChild(viewportEl);
@@ -67,13 +67,13 @@ function main() {
   app.appendChild(statusBarEl);
 
   // ── Create components ──
-  const toolbar   = createToolbar(toolbarEl);
-  const tree      = createChannelTree(sidebarEl, {
+  const toolbar = createToolbar(toolbarEl);
+  const tree = createChannelTree(sidebarEl, {
     onChannelSelect: handleChannelSelect,
   });
-  const viewport  = createViewport(viewportEl);
-  const bottom    = createBottomPanel(bottomEl);
-  const props     = createPropertiesPanel(propsEl);
+  const viewport = createViewport(viewportEl);
+  const bottom = createBottomPanel(bottomEl);
+  const props = createPropertiesPanel(propsEl);
   const statusbar = createStatusBar(statusBarEl);
 
   // ── Application state ──
@@ -125,13 +125,15 @@ function main() {
     viewport.setSummary(summary);
     statusbar.setFileInfo(summary.file);
     toolbar.setVersion(summary.file.standardVersion);
-    toolbar.setTime(formatIrigTime({
-      dayOfYear: 74,
-      hours: 14,
-      minutes: 23,
-      seconds: 45,
-      microseconds: 123456,
-    }));
+    toolbar.setTime(
+      formatIrigTime({
+        dayOfYear: 74,
+        hours: 14,
+        minutes: 23,
+        seconds: 45,
+        microseconds: 123456,
+      }),
+    );
     statusbar.setStatus("ready");
 
     // Auto-select first channel
@@ -196,7 +198,7 @@ function main() {
 
     selectedChannelIndex = Math.max(
       0,
-      Math.min(channels.length - 1, selectedChannelIndex + direction)
+      Math.min(channels.length - 1, selectedChannelIndex + direction),
     );
     const ch = channels[selectedChannelIndex];
     tree.setActiveChannel(ch.channelId);
@@ -216,16 +218,16 @@ function main() {
 
   const viewportTabMap: Record<string, ViewportTab> = {
     "view.waveform": "waveform",
-    "view.hex":      "hex",
-    "view.packets":  "packets",
-    "view.tmats":    "tmats",
+    "view.hex": "hex",
+    "view.packets": "packets",
+    "view.tmats": "tmats",
   };
 
   const bottomTabMap: Record<string, BottomTab> = {
-    "bottom.console":    "console",
+    "bottom.console": "console",
     "bottom.statistics": "statistics",
-    "bottom.timecorr":   "time-correlation",
-    "bottom.errors":     "errors",
+    "bottom.timecorr": "time-correlation",
+    "bottom.errors": "errors",
   };
 
   initKeyboardShortcuts((action) => {
@@ -237,21 +239,33 @@ function main() {
 
     // Transport
     if (action === "transport.play") {
-      bottom.addLog({ timestamp: now(), level: "info", message: "Play/Pause toggled (no playback engine yet)" });
+      bottom.addLog({
+        timestamp: now(),
+        level: "info",
+        message: "Play/Pause toggled (no playback engine yet)",
+      });
       return;
     }
     if (action === "transport.first") {
-      toolbar.setTime(formatIrigTime({ dayOfYear: 74, hours: 14, minutes: 23, seconds: 44, microseconds: 0 }));
+      toolbar.setTime(
+        formatIrigTime({ dayOfYear: 74, hours: 14, minutes: 23, seconds: 44, microseconds: 0 }),
+      );
       bottom.addLog({ timestamp: now(), level: "info", message: "Jumped to first packet" });
       return;
     }
     if (action === "transport.last") {
-      toolbar.setTime(formatIrigTime({ dayOfYear: 74, hours: 15, minutes: 5, seconds: 59, microseconds: 999999 }));
+      toolbar.setTime(
+        formatIrigTime({ dayOfYear: 74, hours: 15, minutes: 5, seconds: 59, microseconds: 999999 }),
+      );
       bottom.addLog({ timestamp: now(), level: "info", message: "Jumped to last packet" });
       return;
     }
     if (action === "transport.back" || action === "transport.forward") {
-      bottom.addLog({ timestamp: now(), level: "info", message: `Step ${action === "transport.back" ? "backward" : "forward"}` });
+      bottom.addLog({
+        timestamp: now(),
+        level: "info",
+        message: `Step ${action === "transport.back" ? "backward" : "forward"}`,
+      });
       return;
     }
 
@@ -403,7 +417,11 @@ function main() {
         label: "Show in packets view",
         action: () => {
           viewport.setActiveTab("packets");
-          bottom.addLog({ timestamp: now(), level: "info", message: `Filter packets to Ch ${chId} (not yet implemented)` });
+          bottom.addLog({
+            timestamp: now(),
+            level: "info",
+            message: `Filter packets to Ch ${chId} (not yet implemented)`,
+          });
         },
       },
       {
@@ -443,7 +461,11 @@ function main() {
         label: "View in hex",
         action: () => {
           viewport.setActiveTab("hex");
-          bottom.addLog({ timestamp: now(), level: "info", message: `Jump to ${offsetText} in hex view (not yet implemented)` });
+          bottom.addLog({
+            timestamp: now(),
+            level: "info",
+            message: `Jump to ${offsetText} in hex view (not yet implemented)`,
+          });
         },
       },
     ]);
@@ -454,7 +476,11 @@ function main() {
   // ────────────────────────────────────────────
 
   bottom.addLog({ timestamp: now(), level: "info", message: "IRIG106-Studio v0.1.0 ready" });
-  bottom.addLog({ timestamp: now(), level: "info", message: "Drop a .ch10 file or press Ctrl+O to begin" });
+  bottom.addLog({
+    timestamp: now(),
+    level: "info",
+    message: "Drop a .ch10 file or press Ctrl+O to begin",
+  });
 
   console.log(`[IRIG106-Studio] Platform: ${platform.name}`);
   console.log(`[IRIG106-Studio] Press ? for keyboard shortcuts`);
@@ -474,7 +500,7 @@ const panelStates = new Map<HTMLElement, PanelState>();
 function initPanelResize(
   panelEl: HTMLElement,
   axis: "col" | "row",
-  side: "left" | "right" | "top"
+  side: "left" | "right" | "top",
 ) {
   const handle = panelEl.querySelector(`.resize-handle--${axis}.${side}`) as HTMLElement | null;
   if (!handle) return;

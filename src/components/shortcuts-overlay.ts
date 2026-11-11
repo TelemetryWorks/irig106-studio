@@ -92,7 +92,7 @@ function createOverlayElement(): HTMLElement {
         <span class="shortcuts-overlay__label">${escHtml(s.label)}</span>
         <kbd class="shortcuts-overlay__kbd">${escHtml(formatShortcut(s))}</kbd>
       </div>
-    `
+    `,
       )
       .join("");
 

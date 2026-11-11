@@ -175,7 +175,10 @@ mod tests {
 
     #[test]
     fn checksum_16_wrapping() {
-        assert_eq!(checksum_16(&[0xFF, 0xFF, 0x02, 0x00]), 0xFFFFu16.wrapping_add(0x0002));
+        assert_eq!(
+            checksum_16(&[0xFF, 0xFF, 0x02, 0x00]),
+            0xFFFFu16.wrapping_add(0x0002)
+        );
     }
 
     #[test]
@@ -219,17 +222,21 @@ mod tests {
     #[test]
     fn validate_header_no_checksum() {
         let mut header = [0u8; 24];
-        header[0] = 0x25; header[1] = 0xEB; // sync
-        header[14] = 0x00; header[15] = 0x00; // flags = no checksum
+        header[0] = 0x25;
+        header[1] = 0xEB; // sync
+        header[14] = 0x00;
+        header[15] = 0x00; // flags = no checksum
         assert!(validate_header_checksum(&header));
     }
 
     #[test]
     fn validate_header_16bit_correct() {
         let mut header = [0u8; 24];
-        header[0] = 0x25; header[1] = 0xEB; // sync
-        // Set flags to 16-bit checksum
-        header[14] = 0x02; header[15] = 0x00;
+        header[0] = 0x25;
+        header[1] = 0xEB; // sync
+                          // Set flags to 16-bit checksum
+        header[14] = 0x02;
+        header[15] = 0x00;
         // Compute checksum of bytes 0-21 and store in 22-23
         let sum = checksum_16(&header[..22]);
         let sum_bytes = sum.to_le_bytes();
@@ -242,9 +249,12 @@ mod tests {
     #[test]
     fn validate_header_16bit_incorrect() {
         let mut header = [0u8; 24];
-        header[0] = 0x25; header[1] = 0xEB;
-        header[14] = 0x02; header[15] = 0x00; // 16-bit checksum
-        header[22] = 0xFF; header[23] = 0xFF; // wrong checksum
+        header[0] = 0x25;
+        header[1] = 0xEB;
+        header[14] = 0x02;
+        header[15] = 0x00; // 16-bit checksum
+        header[22] = 0xFF;
+        header[23] = 0xFF; // wrong checksum
 
         assert!(!validate_header_checksum(&header));
     }

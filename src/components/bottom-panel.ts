@@ -15,12 +15,16 @@ export function createBottomPanel(container: HTMLElement): {
   container.innerHTML = `
     <div class="resize-handle resize-handle--row top" aria-hidden="true"></div>
     <div class="tab-bar" id="bottom-tabs" role="tablist" aria-label="Bottom panel tabs">
-      ${tabs.map((t) => `
+      ${tabs
+        .map(
+          (t) => `
         <span class="tab-bar__tab${t === "console" ? " tab-bar__tab--active" : ""}" data-tab="${t}"
               role="tab" aria-selected="${t === "console" ? "true" : "false"}" tabindex="${t === "console" ? "0" : "-1"}">
           ${tabLabel(t)}
         </span>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </div>
     <div class="panel__body" id="bottom-body" role="tabpanel" aria-label="Bottom panel content" style="padding:4px 2px"></div>
   `;
@@ -73,7 +77,7 @@ export function createBottomPanel(container: HTMLElement): {
         <span class="console__level console__level--${entry.level}">[${entry.level.toUpperCase()}]</span>
         <span class="console__msg">${escHtml(entry.message)}</span>
       </div>
-    `
+    `,
       )
       .join("");
 
@@ -134,7 +138,7 @@ export function createBottomPanel(container: HTMLElement): {
         <span class="console__level console__level--${entry.level}">[${entry.level.toUpperCase()}]</span>
         <span class="console__msg">${escHtml(entry.message)}</span>
       </div>
-    `
+    `,
       )
       .join("");
   }

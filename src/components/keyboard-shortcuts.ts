@@ -39,36 +39,76 @@ export type ShortcutHandler = (action: string) => void;
 
 export const KEYMAP: Shortcut[] = [
   // File
-  { action: "file.open",          label: "Open file",             category: "file",       key: "o",         mod: true },
+  { action: "file.open", label: "Open file", category: "file", key: "o", mod: true },
 
   // Transport
-  { action: "transport.play",     label: "Play / Pause",          category: "transport",  key: " " },
-  { action: "transport.first",    label: "Jump to first packet",  category: "transport",  key: "Home" },
-  { action: "transport.last",     label: "Jump to last packet",   category: "transport",  key: "End" },
-  { action: "transport.back",     label: "Step backward",         category: "transport",  key: "ArrowLeft" },
-  { action: "transport.forward",  label: "Step forward",          category: "transport",  key: "ArrowRight" },
+  { action: "transport.play", label: "Play / Pause", category: "transport", key: " " },
+  { action: "transport.first", label: "Jump to first packet", category: "transport", key: "Home" },
+  { action: "transport.last", label: "Jump to last packet", category: "transport", key: "End" },
+  { action: "transport.back", label: "Step backward", category: "transport", key: "ArrowLeft" },
+  { action: "transport.forward", label: "Step forward", category: "transport", key: "ArrowRight" },
 
   // Navigation — viewport tabs
-  { action: "view.waveform",      label: "Waveform tab",          category: "view",       key: "1",         alt: true },
-  { action: "view.hex",           label: "Hex tab",               category: "view",       key: "2",         alt: true },
-  { action: "view.packets",       label: "Packets tab",           category: "view",       key: "3",         alt: true },
-  { action: "view.tmats",         label: "TMATS tab",             category: "view",       key: "4",         alt: true },
+  { action: "view.waveform", label: "Waveform tab", category: "view", key: "1", alt: true },
+  { action: "view.hex", label: "Hex tab", category: "view", key: "2", alt: true },
+  { action: "view.packets", label: "Packets tab", category: "view", key: "3", alt: true },
+  { action: "view.tmats", label: "TMATS tab", category: "view", key: "4", alt: true },
 
   // Navigation — bottom panel tabs
-  { action: "bottom.console",     label: "Console tab",           category: "navigation", key: "1",         alt: true, shift: true },
-  { action: "bottom.statistics",  label: "Statistics tab",        category: "navigation", key: "2",         alt: true, shift: true },
-  { action: "bottom.timecorr",    label: "Time correlation tab",  category: "navigation", key: "3",         alt: true, shift: true },
-  { action: "bottom.errors",      label: "Errors tab",            category: "navigation", key: "4",         alt: true, shift: true },
+  {
+    action: "bottom.console",
+    label: "Console tab",
+    category: "navigation",
+    key: "1",
+    alt: true,
+    shift: true,
+  },
+  {
+    action: "bottom.statistics",
+    label: "Statistics tab",
+    category: "navigation",
+    key: "2",
+    alt: true,
+    shift: true,
+  },
+  {
+    action: "bottom.timecorr",
+    label: "Time correlation tab",
+    category: "navigation",
+    key: "3",
+    alt: true,
+    shift: true,
+  },
+  {
+    action: "bottom.errors",
+    label: "Errors tab",
+    category: "navigation",
+    key: "4",
+    alt: true,
+    shift: true,
+  },
 
   // Navigation — channels
-  { action: "nav.channel.up",     label: "Previous channel",      category: "navigation", key: "ArrowUp",   alt: true },
-  { action: "nav.channel.down",   label: "Next channel",          category: "navigation", key: "ArrowDown", alt: true },
-  { action: "nav.filter",         label: "Filter channels",       category: "navigation", key: "/" },
+  {
+    action: "nav.channel.up",
+    label: "Previous channel",
+    category: "navigation",
+    key: "ArrowUp",
+    alt: true,
+  },
+  {
+    action: "nav.channel.down",
+    label: "Next channel",
+    category: "navigation",
+    key: "ArrowDown",
+    alt: true,
+  },
+  { action: "nav.filter", label: "Filter channels", category: "navigation", key: "/" },
 
   // App
-  { action: "app.shortcuts",      label: "Show keyboard shortcuts",category: "app",       key: "?" },
-  { action: "app.shortcuts",      label: "Show keyboard shortcuts",category: "app",       key: "F1" },
-  { action: "app.theme",          label: "Toggle theme",           category: "app",       key: "t",         mod: true, shift: true },
+  { action: "app.shortcuts", label: "Show keyboard shortcuts", category: "app", key: "?" },
+  { action: "app.shortcuts", label: "Show keyboard shortcuts", category: "app", key: "F1" },
+  { action: "app.theme", label: "Toggle theme", category: "app", key: "t", mod: true, shift: true },
 ];
 
 // ── Binding ──
@@ -131,20 +171,20 @@ export function formatShortcut(s: Shortcut): string {
   const isMac = navigator.platform?.includes("Mac") ?? false;
   const parts: string[] = [];
 
-  if (s.mod)   parts.push(isMac ? "⌘" : "Ctrl");
-  if (s.alt)   parts.push(isMac ? "⌥" : "Alt");
+  if (s.mod) parts.push(isMac ? "⌘" : "Ctrl");
+  if (s.alt) parts.push(isMac ? "⌥" : "Alt");
   if (s.shift) parts.push("⇧");
 
   // Pretty-print key names
   const keyLabel: Record<string, string> = {
     " ": "Space",
-    "ArrowLeft": "←",
-    "ArrowRight": "→",
-    "ArrowUp": "↑",
-    "ArrowDown": "↓",
-    "Home": "Home",
-    "End": "End",
-    "F1": "F1",
+    ArrowLeft: "←",
+    ArrowRight: "→",
+    ArrowUp: "↑",
+    ArrowDown: "↓",
+    Home: "Home",
+    End: "End",
+    F1: "F1",
     "?": "?",
   };
 

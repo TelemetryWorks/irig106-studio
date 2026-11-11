@@ -239,7 +239,7 @@ mod packet_index_tests {
         file.extend_from_slice(&SYNC_PATTERN.to_le_bytes());
         file.extend_from_slice(&[0x02, 0x00]); // channel_id = 2
         file.extend_from_slice(&[0xFF, 0x00, 0x00, 0x00]); // packet_length = 255 (exceeds file)
-        // Fill up to at least 24 bytes for the header
+                                                           // Fill up to at least 24 bytes for the header
         while file.len() < (24 + 32) + 24 {
             file.push(0x00);
         }
@@ -286,9 +286,7 @@ mod packet_index_tests {
 
     #[test]
     fn read_header_returns_correct_fields() {
-        let file = make_file(&[
-            make_packet(4, 0x38, 42, 100, 0xDD),
-        ]);
+        let file = make_file(&[make_packet(4, 0x38, 42, 100, 0xDD)]);
         let buf = MemBuffer::from_vec(file);
         let index = PacketIndex::build(&buf).unwrap();
         let header = index.read_header(0, &buf).unwrap();
@@ -479,10 +477,7 @@ mod error_tests {
         let msg = format!("{}", e);
         assert!(msg.contains("10 bytes"));
 
-        let e = StudioError::IndexOutOfRange {
-            index: 5,
-            count: 3,
-        };
+        let e = StudioError::IndexOutOfRange { index: 5, count: 3 };
         let msg = format!("{}", e);
         assert!(msg.contains("5"));
         assert!(msg.contains("3"));
@@ -497,9 +492,9 @@ mod file_tests {
     #[test]
     fn from_bytes_with_valid_packets() {
         let file_bytes = make_file(&[
-            make_packet(0, 0x00, 0, 64, 0x00),  // TMATS (ch 0)
-            make_packet(1, 0x19, 0, 32, 0xAA),  // 1553
-            make_packet(4, 0x11, 0, 16, 0x00),  // Time
+            make_packet(0, 0x00, 0, 64, 0x00), // TMATS (ch 0)
+            make_packet(1, 0x19, 0, 32, 0xAA), // 1553
+            make_packet(4, 0x11, 0, 16, 0x00), // Time
         ]);
         let file = Ch10File::from_bytes(file_bytes, "test.ch10").unwrap();
 
@@ -517,9 +512,7 @@ mod file_tests {
 
     #[test]
     fn read_header_matches_packet_data() {
-        let file_bytes = make_file(&[
-            make_packet(7, 0x68, 99, 128, 0xEE),
-        ]);
+        let file_bytes = make_file(&[make_packet(7, 0x68, 99, 128, 0xEE)]);
         let file = Ch10File::from_bytes(file_bytes, "test.ch10").unwrap();
         let header = file.read_header(0).unwrap();
 
@@ -531,9 +524,7 @@ mod file_tests {
 
     #[test]
     fn read_data_returns_payload() {
-        let file_bytes = make_file(&[
-            make_packet(1, 0x19, 0, 8, 0x42),
-        ]);
+        let file_bytes = make_file(&[make_packet(1, 0x19, 0, 8, 0x42)]);
         let file = Ch10File::from_bytes(file_bytes, "test.ch10").unwrap();
         // Payload starts at offset 24 (after header)
         let data = file.read_data(24, 8).unwrap();
@@ -591,7 +582,9 @@ mod golden_file_tests {
         // Second batch of 1553
         let pkt_1553_d = make_packet(1, 0x19, 3, 64, 0xDD);
 
-        make_file(&[tmats, pkt_1553_a, pkt_1553_b, time_pkt, pkt_1553_c, pkt_1553_d])
+        make_file(&[
+            tmats, pkt_1553_a, pkt_1553_b, time_pkt, pkt_1553_c, pkt_1553_d,
+        ])
     }
 
     #[test]
@@ -620,9 +613,9 @@ mod golden_file_tests {
     fn golden_file_channel_counts() {
         let data = build_golden_file();
         let file = Ch10File::from_bytes(data, "golden.ch10").unwrap();
-        assert_eq!(file.index().count_for_channel(0), 1);  // TMATS
-        assert_eq!(file.index().count_for_channel(1), 4);  // 1553
-        assert_eq!(file.index().count_for_channel(4), 1);  // Time
+        assert_eq!(file.index().count_for_channel(0), 1); // TMATS
+        assert_eq!(file.index().count_for_channel(1), 4); // 1553
+        assert_eq!(file.index().count_for_channel(4), 1); // Time
     }
 
     #[test]

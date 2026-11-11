@@ -30,10 +30,7 @@ export interface DragDropCallbacks {
  * @param callbacks  — handlers for drop events
  * @returns cleanup function to remove all listeners
  */
-export function initDragDrop(
-  container: HTMLElement,
-  callbacks: DragDropCallbacks
-): () => void {
+export function initDragDrop(container: HTMLElement, callbacks: DragDropCallbacks): () => void {
   // Create overlay (hidden by default)
   const overlay = document.createElement("div");
   overlay.className = "drop-overlay";

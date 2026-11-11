@@ -27,9 +27,9 @@ use crate::io::FileBuffer;
 use crate::summary::Ch10Summary;
 use crate::types::*;
 
+use crate::io::MemBuffer;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::io::MmapBuffer;
-use crate::io::MemBuffer;
 
 #[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
@@ -72,7 +72,11 @@ impl Ch10File {
             standard_version: "106-17".into(), // TODO: detect from TMATS
         };
 
-        Ok(Self { buffer, index, info })
+        Ok(Self {
+            buffer,
+            index,
+            info,
+        })
     }
 
     /// Open a Ch10 file from an in-memory buffer (wasm or test).
@@ -94,7 +98,11 @@ impl Ch10File {
             standard_version: "106-17".into(),
         };
 
-        Ok(Self { buffer, index, info })
+        Ok(Self {
+            buffer,
+            index,
+            info,
+        })
     }
 
     /// Get file-level metadata.
@@ -138,7 +146,9 @@ impl Ch10File {
             if entry.channel_id == 0 {
                 let header = self.read_header(i)?;
                 let payload_offset = entry.file_offset + PACKET_HEADER_SIZE as u64;
-                let payload = self.buffer.read_at(payload_offset, header.data_length as usize)?;
+                let payload = self
+                    .buffer
+                    .read_at(payload_offset, header.data_length as usize)?;
                 tmats_bytes.extend_from_slice(payload);
             }
         }

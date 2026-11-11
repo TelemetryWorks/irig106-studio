@@ -58,7 +58,9 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
 }
 .toolbar__menu-item:hover {
   background: var(--c-raised);
@@ -90,7 +92,9 @@
   font-size: 12px;
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
 }
 .toolbar__transport-btn:hover {
   background: var(--c-raised);
@@ -130,7 +134,10 @@
   font-size: 14px;
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast), border-color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast),
+    border-color var(--t-fast);
 }
 .toolbar__theme-toggle:hover {
   background: var(--c-raised);
@@ -268,8 +275,11 @@
 /* ── Panel collapse/expand ── */
 .panel--collapsed {
   overflow: hidden;
-  transition: width var(--t-normal), height var(--t-normal),
-              min-width var(--t-normal), min-height var(--t-normal);
+  transition:
+    width var(--t-normal),
+    height var(--t-normal),
+    min-width var(--t-normal),
+    min-height var(--t-normal);
 }
 .panel--collapsed .panel__header,
 .panel--collapsed .panel__body,
@@ -304,7 +314,9 @@
   align-items: center;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: color var(--t-fast), border-color var(--t-fast);
+  transition:
+    color var(--t-fast),
+    border-color var(--t-fast);
   white-space: nowrap;
 }
 .tab-bar__tab:hover {
@@ -326,7 +338,9 @@
   border-radius: var(--r-sm);
   cursor: pointer;
   white-space: nowrap;
-  transition: background var(--t-fast), color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
 }
 .tree-item:hover {
   background: var(--c-raised);
@@ -406,16 +420,46 @@
   line-height: 16px;
   flex-shrink: 0;
 }
-.badge--1553     { background: var(--c-dt-1553-bg);     color: var(--c-dt-1553); }
-.badge--pcm      { background: var(--c-dt-pcm-bg);      color: var(--c-dt-pcm); }
-.badge--time     { background: var(--c-dt-time-bg);     color: var(--c-dt-time); }
-.badge--video    { background: var(--c-dt-video-bg);     color: var(--c-dt-video); }
-.badge--arinc    { background: var(--c-dt-arinc-bg);     color: var(--c-dt-arinc); }
-.badge--analog   { background: var(--c-dt-analog-bg);    color: var(--c-dt-analog); }
-.badge--discrete { background: var(--c-dt-discrete-bg);  color: var(--c-dt-discrete); }
-.badge--message  { background: var(--c-dt-message-bg);   color: var(--c-dt-message); }
-.badge--uart     { background: var(--c-dt-uart-bg);      color: var(--c-dt-uart); }
-.badge--ethernet { background: var(--c-dt-ethernet-bg);  color: var(--c-dt-ethernet); }
+.badge--1553 {
+  background: var(--c-dt-1553-bg);
+  color: var(--c-dt-1553);
+}
+.badge--pcm {
+  background: var(--c-dt-pcm-bg);
+  color: var(--c-dt-pcm);
+}
+.badge--time {
+  background: var(--c-dt-time-bg);
+  color: var(--c-dt-time);
+}
+.badge--video {
+  background: var(--c-dt-video-bg);
+  color: var(--c-dt-video);
+}
+.badge--arinc {
+  background: var(--c-dt-arinc-bg);
+  color: var(--c-dt-arinc);
+}
+.badge--analog {
+  background: var(--c-dt-analog-bg);
+  color: var(--c-dt-analog);
+}
+.badge--discrete {
+  background: var(--c-dt-discrete-bg);
+  color: var(--c-dt-discrete);
+}
+.badge--message {
+  background: var(--c-dt-message-bg);
+  color: var(--c-dt-message);
+}
+.badge--uart {
+  background: var(--c-dt-uart-bg);
+  color: var(--c-dt-uart);
+}
+.badge--ethernet {
+  background: var(--c-dt-ethernet-bg);
+  color: var(--c-dt-ethernet);
+}
 
 /* ── Properties list ── */
 .prop-section {
@@ -747,24 +791,73 @@
   flex: 1;
   color: var(--c-text-secondary);
 }
-.tmats-attr    { color: var(--c-text-primary); }
-.tmats-value   { color: var(--c-accent-text); }
-.tmats-sep     { color: var(--c-text-disabled); }
-.tmats-semi    { color: var(--c-text-disabled); }
-.tmats-comment { color: var(--c-text-disabled); font-style: italic; }
-.tmats-plain   { color: var(--c-text-tertiary); }
-.tmats-group--r       { color: var(--c-dt-1553); font-weight: 600; }
-.tmats-group--g       { color: var(--c-dt-arinc); font-weight: 600; }
-.tmats-group--b       { color: var(--c-dt-pcm); font-weight: 600; }
-.tmats-group--d       { color: var(--c-dt-ethernet); font-weight: 600; }
-.tmats-group--p       { color: var(--c-dt-analog); font-weight: 600; }
-.tmats-group--t       { color: var(--c-dt-time); font-weight: 600; }
-.tmats-group--m       { color: var(--c-dt-discrete); font-weight: 600; }
-.tmats-group--s       { color: var(--c-dt-message); font-weight: 600; }
-.tmats-group--c       { color: var(--c-dt-uart); font-weight: 600; }
-.tmats-group--h       { color: var(--c-dt-video); font-weight: 600; }
-.tmats-group--v       { color: var(--c-dt-video); font-weight: 600; }
-.tmats-group--default { color: var(--c-text-secondary); font-weight: 600; }
+.tmats-attr {
+  color: var(--c-text-primary);
+}
+.tmats-value {
+  color: var(--c-accent-text);
+}
+.tmats-sep {
+  color: var(--c-text-disabled);
+}
+.tmats-semi {
+  color: var(--c-text-disabled);
+}
+.tmats-comment {
+  color: var(--c-text-disabled);
+  font-style: italic;
+}
+.tmats-plain {
+  color: var(--c-text-tertiary);
+}
+.tmats-group--r {
+  color: var(--c-dt-1553);
+  font-weight: 600;
+}
+.tmats-group--g {
+  color: var(--c-dt-arinc);
+  font-weight: 600;
+}
+.tmats-group--b {
+  color: var(--c-dt-pcm);
+  font-weight: 600;
+}
+.tmats-group--d {
+  color: var(--c-dt-ethernet);
+  font-weight: 600;
+}
+.tmats-group--p {
+  color: var(--c-dt-analog);
+  font-weight: 600;
+}
+.tmats-group--t {
+  color: var(--c-dt-time);
+  font-weight: 600;
+}
+.tmats-group--m {
+  color: var(--c-dt-discrete);
+  font-weight: 600;
+}
+.tmats-group--s {
+  color: var(--c-dt-message);
+  font-weight: 600;
+}
+.tmats-group--c {
+  color: var(--c-dt-uart);
+  font-weight: 600;
+}
+.tmats-group--h {
+  color: var(--c-dt-video);
+  font-weight: 600;
+}
+.tmats-group--v {
+  color: var(--c-dt-video);
+  font-weight: 600;
+}
+.tmats-group--default {
+  color: var(--c-text-secondary);
+  font-weight: 600;
+}
 
 /* ── Hex view ── */
 .hex-view {
@@ -845,9 +938,15 @@
   flex-shrink: 0;
   font-weight: 600;
 }
-.console__level--info { color: var(--c-info); }
-.console__level--warn { color: var(--c-warning); }
-.console__level--error { color: var(--c-danger); }
+.console__level--info {
+  color: var(--c-info);
+}
+.console__level--warn {
+  color: var(--c-warning);
+}
+.console__level--error {
+  color: var(--c-danger);
+}
 
 .console__msg {
   color: var(--c-text-secondary);
@@ -914,7 +1013,9 @@
   border-radius: var(--r-lg);
   background: rgba(118, 185, 0, 0.06);
   color: var(--c-text-primary);
-  transition: border-color 150ms ease, background 150ms ease;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
 }
 .drop-overlay--invalid .drop-overlay__content {
   border-color: var(--c-danger);
@@ -967,7 +1068,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
 }
 .shortcuts-overlay__header {
   display: flex;
@@ -993,7 +1094,9 @@
   font-size: var(--fs-md);
   border-radius: var(--r-sm);
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
 }
 .shortcuts-overlay__close:hover {
   background: var(--c-raised);
@@ -1051,11 +1154,13 @@
   border: 1px solid var(--c-border-secondary);
   border-radius: var(--r-lg);
   padding: var(--sp-2) 0;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
   opacity: 0;
   pointer-events: none;
   transform: scale(0.96);
-  transition: opacity 80ms ease, transform 80ms ease;
+  transition:
+    opacity 80ms ease,
+    transform 80ms ease;
 }
 .ctx-menu--visible {
   opacity: 1;
@@ -1067,7 +1172,9 @@
   font-size: var(--fs-sm);
   color: var(--c-text-secondary);
   cursor: pointer;
-  transition: background var(--t-fast), color var(--t-fast);
+  transition:
+    background var(--t-fast),
+    color var(--t-fast);
   white-space: nowrap;
 }
 .ctx-menu__item:hover {

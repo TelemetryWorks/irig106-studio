@@ -115,10 +115,13 @@ impl PacketIndex {
 
     /// Read the full packet header for a given packet index.
     pub fn read_header(&self, index: usize, buffer: &dyn FileBuffer) -> Result<PacketHeader> {
-        let entry = self.entries.get(index).ok_or(StudioError::IndexOutOfRange {
-            index: index as u64,
-            count: self.entries.len() as u64,
-        })?;
+        let entry = self
+            .entries
+            .get(index)
+            .ok_or(StudioError::IndexOutOfRange {
+                index: index as u64,
+                count: self.entries.len() as u64,
+            })?;
 
         let bytes = buffer.read_at(entry.file_offset, PACKET_HEADER_SIZE)?;
         parse_header(bytes, entry.file_offset)
@@ -126,11 +129,7 @@ impl PacketIndex {
 
     /// Get all unique channel IDs in the file.
     pub fn channel_ids(&self) -> Vec<u16> {
-        let mut ids: Vec<u16> = self
-            .entries
-            .iter()
-            .map(|e| e.channel_id)
-            .collect();
+        let mut ids: Vec<u16> = self.entries.iter().map(|e| e.channel_id).collect();
         ids.sort_unstable();
         ids.dedup();
         ids

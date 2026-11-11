@@ -28,7 +28,7 @@ export interface ChannelTreeCallbacks {
 
 export function createChannelTree(
   container: HTMLElement,
-  callbacks: ChannelTreeCallbacks
+  callbacks: ChannelTreeCallbacks,
 ): {
   setSummary(summary: Ch10Summary): void;
   setActiveChannel(channelId: number): void;
