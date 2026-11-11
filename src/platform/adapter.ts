@@ -12,11 +12,7 @@
  *   - MockAdapter:    dev/demo — returns synthetic data (used until backends exist)
  */
 
-import type {
-  Ch10Summary,
-  PacketHeader,
-  LogEntry,
-} from "@/types/domain";
+import type { Ch10Summary, PacketHeader, LogEntry } from "@/types/domain";
 
 // ── Platform interface ──
 
@@ -228,7 +224,7 @@ class WasmAdapter implements PlatformAdapter {
       // Dynamic import — Vite ignores this at build time.
       // The WASM module is only present after `wasm-pack build`.
       const wasmPath = "../wasm/irig106_studio_wasm.js";
-      this.wasmModule = await import(/* @vite-ignore */ wasmPath) as unknown as WasmModule;
+      this.wasmModule = (await import(/* @vite-ignore */ wasmPath)) as unknown as WasmModule;
       await this.wasmModule.default();
       return true;
     } catch {
@@ -291,11 +287,15 @@ function pickFile(): Promise<File | null> {
     });
     // If the user cancels, the change event never fires.
     // Use a focus listener to detect cancel (imperfect but common).
-    window.addEventListener("focus", () => {
-      setTimeout(() => {
-        if (!input.files?.length) resolve(null);
-      }, 500);
-    }, { once: true });
+    window.addEventListener(
+      "focus",
+      () => {
+        setTimeout(() => {
+          if (!input.files?.length) resolve(null);
+        }, 500);
+      },
+      { once: true },
+    );
     input.click();
   });
 }
@@ -328,7 +328,9 @@ export function getPlatform(): PlatformAdapter {
       _adapter = new TauriAdapter();
     } else {
       // In browser mode, mock until WASM is built
-      console.log("[platform] Browser mode — using mock adapter (WASM adapter available when built)");
+      console.log(
+        "[platform] Browser mode — using mock adapter (WASM adapter available when built)",
+      );
       _adapter = new MockAdapter();
     }
   }
@@ -364,19 +366,68 @@ const MOCK_SUMMARY: Ch10Summary = {
       id: "DS-1",
       label: "Recorder 1",
       channels: [
-        { channelId: 1, dataType: 0x19, label: "1553 Bus A",        dataSourceId: "DS-1", packetCount: 248_192, dataRate: 1_200_000 },
-        { channelId: 2, dataType: 0x19, label: "1553 Bus B",        dataSourceId: "DS-1", packetCount: 241_017, dataRate: 1_150_000 },
-        { channelId: 3, dataType: 0x09, label: "PCM Stream 1",      dataSourceId: "DS-1", packetCount: 312_445, dataRate: 2_500_000 },
-        { channelId: 4, dataType: 0x11, label: "IRIG Time",         dataSourceId: "DS-1", packetCount: 2_535,   dataRate: 1_000 },
-        { channelId: 5, dataType: 0x40, label: "HUD Camera",        dataSourceId: "DS-1", packetCount: 76_140,  dataRate: 8_000_000 },
+        {
+          channelId: 1,
+          dataType: 0x19,
+          label: "1553 Bus A",
+          dataSourceId: "DS-1",
+          packetCount: 248_192,
+          dataRate: 1_200_000,
+        },
+        {
+          channelId: 2,
+          dataType: 0x19,
+          label: "1553 Bus B",
+          dataSourceId: "DS-1",
+          packetCount: 241_017,
+          dataRate: 1_150_000,
+        },
+        {
+          channelId: 3,
+          dataType: 0x09,
+          label: "PCM Stream 1",
+          dataSourceId: "DS-1",
+          packetCount: 312_445,
+          dataRate: 2_500_000,
+        },
+        {
+          channelId: 4,
+          dataType: 0x11,
+          label: "IRIG Time",
+          dataSourceId: "DS-1",
+          packetCount: 2_535,
+          dataRate: 1_000,
+        },
+        {
+          channelId: 5,
+          dataType: 0x40,
+          label: "HUD Camera",
+          dataSourceId: "DS-1",
+          packetCount: 76_140,
+          dataRate: 8_000_000,
+        },
       ],
     },
     {
       id: "DS-2",
       label: "Recorder 2",
       channels: [
-        { channelId: 6, dataType: 0x38, label: "ARINC 429 Bus 1",  dataSourceId: "DS-2", packetCount: 185_300, dataRate: 800_000 },
-        { channelId: 7, dataType: 0x68, label: "Ethernet Ch 1",    dataSourceId: "DS-2", packetCount: 182_203, dataRate: 4_200_000 },
+        {
+          channelId: 6,
+          dataType: 0x38,
+          label: "ARINC 429 Bus 1",
+          dataSourceId: "DS-2",
+          packetCount: 185_300,
+          dataRate: 800_000,
+        },
+        {
+          channelId: 7,
+          dataType: 0x68,
+          label: "Ethernet Ch 1",
+          dataSourceId: "DS-2",
+          packetCount: 182_203,
+          dataRate: 4_200_000,
+        },
       ],
     },
   ],

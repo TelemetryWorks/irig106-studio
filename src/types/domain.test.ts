@@ -8,11 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  formatIrigTime,
-  dataTypeBadge,
-  DataType,
-} from "@/types/domain";
+import { formatIrigTime, dataTypeBadge, DataType } from "@/types/domain";
 import type { IrigTime } from "@/types/domain";
 
 describe("formatIrigTime", () => {

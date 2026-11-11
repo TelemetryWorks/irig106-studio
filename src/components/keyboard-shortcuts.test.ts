@@ -8,11 +8,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import {
-  KEYMAP,
-  formatShortcut,
-  getGroupedShortcuts,
-} from "@/components/keyboard-shortcuts";
+import { KEYMAP, formatShortcut, getGroupedShortcuts } from "@/components/keyboard-shortcuts";
 import type { Shortcut } from "@/components/keyboard-shortcuts";
 
 describe("KEYMAP", () => {
@@ -63,7 +59,7 @@ describe("KEYMAP", () => {
     for (const s of KEYMAP) {
       expect(
         validCategories.has(s.category),
-        `Invalid category "${s.category}" on action "${s.action}"`
+        `Invalid category "${s.category}" on action "${s.action}"`,
       ).toBe(true);
     }
   });
@@ -86,7 +82,14 @@ describe("formatShortcut", () => {
   });
 
   it("formats Alt+Shift+1", () => {
-    const s: Shortcut = { action: "test", label: "Test", category: "nav", key: "1", alt: true, shift: true };
+    const s: Shortcut = {
+      action: "test",
+      label: "Test",
+      category: "nav",
+      key: "1",
+      alt: true,
+      shift: true,
+    };
     const result = formatShortcut(s);
     expect(result).toContain("Alt");
     expect(result).toContain("1");
@@ -122,10 +125,7 @@ describe("getGroupedShortcuts", () => {
   it("all groups have at least one shortcut", () => {
     const groups = getGroupedShortcuts();
     for (const [category, shortcuts] of groups) {
-      expect(
-        shortcuts.length,
-        `Category "${category}" is empty`
-      ).toBeGreaterThan(0);
+      expect(shortcuts.length, `Category "${category}" is empty`).toBeGreaterThan(0);
     }
   });
 });

@@ -18,7 +18,9 @@ pub enum StudioError {
     InvalidHeader { offset: u64, detail: String },
 
     /// Packet checksum validation failed.
-    #[error("Checksum mismatch at offset {offset:#x}: expected {expected:#06x}, got {actual:#06x}")]
+    #[error(
+        "Checksum mismatch at offset {offset:#x}: expected {expected:#06x}, got {actual:#06x}"
+    )]
     ChecksumMismatch {
         offset: u64,
         expected: u16,

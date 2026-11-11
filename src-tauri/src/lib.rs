@@ -67,14 +67,12 @@ impl From<&PacketHeader> for PacketHeaderDto {
 /// If `path` is None, a file dialog is shown (requires tauri-plugin-dialog).
 /// Returns the Ch10Summary for the frontend to populate all panels.
 #[tauri::command]
-fn open_ch10_file(
-    path: String,
-    state: State<'_, AppState>,
-) -> Result<Ch10Summary, String> {
-    let file = Ch10File::open(Path::new(&path))
-        .map_err(|e| format!("Failed to open file: {}", e))?;
+fn open_ch10_file(path: String, state: State<'_, AppState>) -> Result<Ch10Summary, String> {
+    let file =
+        Ch10File::open(Path::new(&path)).map_err(|e| format!("Failed to open file: {}", e))?;
 
-    let summary = file.summary()
+    let summary = file
+        .summary()
         .map_err(|e| format!("Failed to build summary: {}", e))?;
 
     // Store the file in app state
@@ -102,7 +100,8 @@ fn read_packet_headers(
 
     let mut headers = Vec::with_capacity(end - start);
     for i in start..end {
-        let h = file.read_header(i)
+        let h = file
+            .read_header(i)
             .map_err(|e| format!("Failed to read header {}: {}", i, e))?;
         headers.push(PacketHeaderDto::from(&h));
     }
@@ -122,7 +121,8 @@ fn read_packet_data(
     let guard = state.file.lock().map_err(|e| e.to_string())?;
     let file = guard.as_ref().ok_or("No file open")?;
 
-    let data = file.read_data(file_offset, length as usize)
+    let data = file
+        .read_data(file_offset, length as usize)
         .map_err(|e| format!("Failed to read data at {:#x}: {}", file_offset, e))?;
 
     Ok(data.to_vec())
@@ -130,9 +130,7 @@ fn read_packet_data(
 
 /// Extract raw TMATS text from channel 0.
 #[tauri::command]
-fn get_tmats(
-    state: State<'_, AppState>,
-) -> Result<String, String> {
+fn get_tmats(state: State<'_, AppState>) -> Result<String, String> {
     let guard = state.file.lock().map_err(|e| e.to_string())?;
     let file = guard.as_ref().ok_or("No file open")?;
 

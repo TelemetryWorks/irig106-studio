@@ -18,28 +18,28 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum DataType {
-    Computer0     = 0x00,
-    Computer1     = 0x01,
-    PcmFmtA      = 0x09,
-    PcmFmtB      = 0x0A,
-    Time          = 0x11,
-    Mil1553FmtA  = 0x19,
-    Mil1553FmtB  = 0x1A,
-    Analog        = 0x21,
-    Discrete      = 0x29,
-    Message       = 0x30,
-    Arinc429      = 0x38,
-    VideoFmtA    = 0x40,
-    VideoFmtB    = 0x41,
-    ImageFmtA    = 0x48,
-    Uart          = 0x50,
-    Ieee1394      = 0x58,
-    ParallelDC    = 0x60,
+    Computer0 = 0x00,
+    Computer1 = 0x01,
+    PcmFmtA = 0x09,
+    PcmFmtB = 0x0A,
+    Time = 0x11,
+    Mil1553FmtA = 0x19,
+    Mil1553FmtB = 0x1A,
+    Analog = 0x21,
+    Discrete = 0x29,
+    Message = 0x30,
+    Arinc429 = 0x38,
+    VideoFmtA = 0x40,
+    VideoFmtB = 0x41,
+    ImageFmtA = 0x48,
+    Uart = 0x50,
+    Ieee1394 = 0x58,
+    ParallelDC = 0x60,
     EthernetFmtA = 0x68,
     EthernetFmtB = 0x69,
-    Tspi          = 0x70,
-    Can           = 0x78,
-    FibreCh       = 0x79,
+    Tspi = 0x70,
+    Can = 0x78,
+    FibreCh = 0x79,
 }
 
 impl DataType {
@@ -153,11 +153,7 @@ impl IrigTime {
     pub fn format(&self) -> String {
         format!(
             "{:03}:{:02}:{:02}:{:02}.{:06}",
-            self.day_of_year,
-            self.hours,
-            self.minutes,
-            self.seconds,
-            self.microseconds,
+            self.day_of_year, self.hours, self.minutes, self.seconds, self.microseconds,
         )
     }
 }
