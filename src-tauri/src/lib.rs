@@ -85,6 +85,7 @@ fn open_ch10_file(path: String, state: State<'_, AppState>) -> Result<Ch10Summar
 /// Read a batch of packet headers for virtual scrolling.
 ///
 /// Returns up to `count` headers starting at `start_index`.
+/// Zero count or a start at/past the end returns an empty page.
 #[tauri::command]
 fn read_packet_headers(
     start_index: u64,
@@ -95,8 +96,9 @@ fn read_packet_headers(
     let file = guard.as_ref().ok_or("No file open")?;
 
     let total = file.index().len();
-    let start = start_index as usize;
-    let end = (start + count as usize).min(total);
+    // L2-LOAD-060: clamp before conversion/addition, including oversized IPC input.
+    let start = usize::try_from(start_index).unwrap_or(total).min(total);
+    let end = start + (count as usize).min(total - start);
 
     let mut headers = Vec::with_capacity(end - start);
     for i in start..end {

@@ -78,12 +78,14 @@ impl StudioSession {
     /// Read packet headers starting at `start_index`, returning up to `count`.
     ///
     /// Returns a JSON array of PacketHeader objects.
+    /// Zero count or a start at/past the end returns an empty array.
     #[wasm_bindgen]
     pub fn read_headers(&self, start_index: u32, count: u32) -> Result<JsValue, JsError> {
         let index = self.file.index();
         let total = index.len();
-        let start = start_index as usize;
-        let end = (start + count as usize).min(total);
+        // L2-LOAD-060: bound the length before adding on wasm32.
+        let start = (start_index as usize).min(total);
+        let end = start + (count as usize).min(total - start);
 
         let mut headers = Vec::with_capacity(end - start);
         for i in start..end {
