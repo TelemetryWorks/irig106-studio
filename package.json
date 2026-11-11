@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:rust": "cd crates/irig106-studio-core && cargo test",
+    "test:wasm": "wasm-pack build crates/irig106-studio-wasm --target nodejs --out-dir target/nodejs --dev && node --test crates/irig106-studio-wasm/tests/pagination.cjs",
     "test:all": "npm run test && npm run test:rust",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/",

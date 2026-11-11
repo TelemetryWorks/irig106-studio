@@ -94,6 +94,7 @@ component.
 | L2-LOAD-030     | File load SHALL update the status bar with file size, packet count, and duration.           | `src/main.ts`            | Implemented  |
 | L2-LOAD-040     | File load SHALL set the IRIG time display in the toolbar.                                   | `src/main.ts`            | Implemented  |
 | L2-LOAD-050     | File load SHALL set the IRIG 106 standard version in the toolbar and status bar.           | `src/main.ts`            | Implemented  |
+| L2-LOAD-060     | Native and WASM header pagination SHALL return up to the requested count in index order, return an empty page for zero count or starts at/past the end, and avoid integer overflow for all accepted start/count values. | `src-tauri/src/lib.rs`, `crates/irig106-studio-wasm/src/lib.rs` | Implemented |
 
 ### 2.4 Navigation  (L1-NAV-*)
 

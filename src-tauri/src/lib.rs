@@ -85,6 +85,7 @@ fn open_ch10_file(path: String, state: State<'_, AppState>) -> Result<Ch10Summar
 /// Read a batch of packet headers for virtual scrolling.
 ///
 /// Returns up to `count` headers starting at `start_index`.
+/// Zero count or a start at/past the end returns an empty page.
 #[tauri::command]
 fn read_packet_headers(
     start_index: u64,
@@ -95,8 +96,9 @@ fn read_packet_headers(
     let file = guard.as_ref().ok_or("No file open")?;
 
     let total = file.index().len();
-    let start = start_index as usize;
-    let end = (start + count as usize).min(total);
+    // L2-LOAD-060: clamp before conversion/addition, including oversized IPC input.
+    let start = usize::try_from(start_index).unwrap_or(total).min(total);
+    let end = start + (count as usize).min(total - start);
 
     let mut headers = Vec::with_capacity(end - start);
     for i in start..end {
@@ -156,4 +158,98 @@ pub fn run() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running IRIG106-Studio");
+}
+
+#[cfg(test)]
+mod pagination_tests {
+    use super::*;
+    use tauri::Manager;
+
+    fn app(packet_count: u16) -> tauri::App<tauri::test::MockRuntime> {
+        let mut bytes = Vec::new();
+        for channel in 0..packet_count {
+            let mut packet = [0u8; 24];
+            packet[..2].copy_from_slice(&0xEB25u16.to_le_bytes());
+            packet[2..4].copy_from_slice(&channel.to_le_bytes());
+            packet[4..8].copy_from_slice(&24u32.to_le_bytes());
+            bytes.extend_from_slice(&packet);
+        }
+        // A valid-sized buffer with no sync pattern gives an empty index.
+        if bytes.is_empty() {
+            bytes.resize(24, 0);
+        }
+        let file = Ch10File::from_bytes(bytes, "pagination.ch10").unwrap();
+        tauri::test::mock_builder()
+            .manage(AppState {
+                file: Mutex::new(Some(file)),
+            })
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap()
+    }
+
+    fn page(packet_count: u16, start: u64, count: u32) -> Vec<u16> {
+        let app = app(packet_count);
+        read_packet_headers(start, count, app.state())
+            .unwrap()
+            .iter()
+            .map(|header| {
+                assert_eq!(header.file_offset, u64::from(header.channel_id) * 24);
+                header.channel_id
+            })
+            .collect()
+    }
+
+    #[test]
+    fn native_normal_and_boundary_pages() {
+        assert_eq!(page(3, 0, 2), vec![0, 1]);
+        assert_eq!(page(3, 1, 2), vec![1, 2]);
+        assert_eq!(page(3, 2, 2), vec![2]);
+        assert_eq!(page(3, 0, u32::MAX), vec![0, 1, 2]);
+        assert_eq!(page(3, 2, u32::MAX), vec![2]);
+    }
+
+    #[test]
+    fn native_empty_pages() {
+        for (total, start, count) in [
+            (3, 0, 0),
+            (3, 3, 1),
+            (3, 4, 1),
+            (3, 4, 0),
+            (0, 0, 1),
+            (0, 1, 1),
+        ] {
+            assert!(
+                page(total, start, count).is_empty(),
+                "{total}/{start}/{count}"
+            );
+        }
+    }
+
+    #[test]
+    fn native_extreme_start_and_count() {
+        for start in [u32::MAX as u64, u32::MAX as u64 + 1, u64::MAX - 1, u64::MAX] {
+            for count in [0, 1, u32::MAX] {
+                assert!(page(3, start, count).is_empty(), "{start}/{count}");
+            }
+        }
+    }
+
+    #[test]
+    fn native_end_addition_overflow() {
+        assert!(page(3, u64::MAX, 1).is_empty());
+    }
+
+    #[test]
+    fn native_no_file_still_errors() {
+        let app = tauri::test::mock_builder()
+            .manage(AppState {
+                file: Mutex::new(None),
+            })
+            .build(tauri::test::mock_context(tauri::test::noop_assets()))
+            .unwrap();
+        assert_eq!(
+            read_packet_headers(0, 0, app.state()).unwrap_err(),
+            "No file open"
+        );
+    }
 }
