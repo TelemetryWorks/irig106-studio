@@ -141,6 +141,11 @@ directory. Native command regressions run with `cargo test --workspace`.
 npm run ci
 ```
 
+This checks lint, formatting, TypeScript source and Vite config types, the
+production build, and frontend tests. Run `npm run typecheck` for just the two
+compiler checks. Neither emits JavaScript or declarations; the composite Node
+project stores build metadata under the ignored `node_modules/.cache/` directory.
+
 ## Project Architecture
 
 Read `docs/PROJECT_STRUCTURE.md` for the complete file map and data

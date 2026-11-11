@@ -85,7 +85,7 @@ describe("formatShortcut", () => {
     const s: Shortcut = {
       action: "test",
       label: "Test",
-      category: "nav",
+      category: "navigation",
       key: "1",
       alt: true,
       shift: true,
@@ -96,12 +96,12 @@ describe("formatShortcut", () => {
   });
 
   it("formats arrow keys with symbols", () => {
-    const s: Shortcut = { action: "test", label: "Test", category: "nav", key: "ArrowLeft" };
+    const s: Shortcut = { action: "test", label: "Test", category: "navigation", key: "ArrowLeft" };
     expect(formatShortcut(s)).toContain("←");
   });
 
   it("formats Home key", () => {
-    const s: Shortcut = { action: "test", label: "Test", category: "nav", key: "Home" };
+    const s: Shortcut = { action: "test", label: "Test", category: "navigation", key: "Home" };
     expect(formatShortcut(s)).toContain("Home");
   });
 });

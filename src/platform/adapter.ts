@@ -151,8 +151,7 @@ export class TauriAdapter implements PlatformAdapter {
     });
 
     if (!selected) return null;
-    const path = typeof selected === "string" ? selected : selected.path;
-    if (!path) return null;
+    const path = selected;
 
     this.emit("info", `Opening ${path}`);
 

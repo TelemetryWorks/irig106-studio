@@ -29,6 +29,9 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      - name: Typecheck source and Vite config
+        run: npm run typecheck
+
       - name: Build
         run: npm run build
 
