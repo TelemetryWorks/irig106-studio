@@ -125,6 +125,16 @@ npm run build:wasm
 
 Then confirm `src/wasm/` contains the generated `.wasm` binary and JS glue.
 
+Run the pagination regressions through the generated WASM exports in Node:
+
+```bash
+CARGO_BUILD_JOBS=2 npm run test:wasm
+```
+
+This requires `wasm-pack`, the `wasm32-unknown-unknown` Rust target, and Node.
+It builds a separate Node test artifact under the WASM crate's ignored `target/`
+directory. Native command regressions run with `cargo test --workspace`.
+
 ### 5. Full CI check
 
 ```bash

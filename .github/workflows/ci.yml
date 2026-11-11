@@ -80,6 +80,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js for WASM export tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -99,3 +104,6 @@ jobs:
 
       - name: Build WASM
         run: cd crates/irig106-studio-wasm && wasm-pack build --target web --out-dir ../../src/wasm
+
+      - name: Test WASM pagination exports
+        run: npm run test:wasm

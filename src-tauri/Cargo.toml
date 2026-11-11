@@ -25,3 +25,6 @@ irig106-studio-core = { path = "../crates/irig106-studio-core" }
 # Future: wire in the standalone crates
 # irig106-time = { path = "../../irig106-time" }
 # irig106-tmats = { path = "../../irig106-tmats" }
+
+[dev-dependencies]
+tauri = { version = "2", features = ["test"] }
