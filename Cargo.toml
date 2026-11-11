@@ -1,5 +1,6 @@
 [workspace]
 resolver = "2"
+exclude = ["crates/irig106-studio-wasm"]
 members = [
     "src-tauri",
     "crates/irig106-studio-core",
