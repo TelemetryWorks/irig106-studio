@@ -9,6 +9,7 @@
 | [005](ADR-005-keyboard-shortcuts.md)   | Centralized keyboard shortcut system  | Accepted | 2026-03-28 |
 | [006](ADR-006-domain-types.md)         | Domain type system as UI–backend contract | Accepted | 2026-03-28 |
 | [008](ADR-008-wasm-architecture.md)   | WASM deployment architecture          | Accepted | 2026-03-28 |
+| [009](ADR-009-studio-rust-190.md) | Rust 1.90 minimum for the Studio desktop app | Accepted | 2026-11-16 |
 
 ## Template for new ADRs
 

@@ -252,4 +252,49 @@ mod pagination_tests {
             "No file open"
         );
     }
+
+    // Characterization: selected files are opened by the native command, not
+    // by a frontend fs-plugin command. No old-code failure is expected here.
+    #[test]
+    fn native_opens_selected_path_without_fs_plugin() {
+        use std::io::Write;
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        struct SelectedFile(std::path::PathBuf);
+        impl Drop for SelectedFile {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_file(&self.0);
+            }
+        }
+
+        let path = std::env::temp_dir().join(format!(
+            "studio-selected-{}-{}.ch10",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        let mut output = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .unwrap();
+        let selected = SelectedFile(path);
+        let mut packet = [0u8; 24];
+        packet[..2].copy_from_slice(&0xEB25u16.to_le_bytes());
+        packet[2..4].copy_from_slice(&1u16.to_le_bytes());
+        packet[4..8].copy_from_slice(&24u32.to_le_bytes());
+        output.write_all(&packet).unwrap();
+        drop(output);
+
+        // app() supplies managed state without installing the fs plugin.
+        let app = app(0);
+        let summary = open_ch10_file(selected.0.to_str().unwrap().into(), app.state()).unwrap();
+        assert_eq!(summary.file.packet_count, 1);
+        assert_eq!(
+            read_packet_headers(0, 1, app.state()).unwrap()[0].channel_id,
+            1
+        );
+    }
 }
