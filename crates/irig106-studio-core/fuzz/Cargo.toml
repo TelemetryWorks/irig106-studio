@@ -22,3 +22,5 @@ name = "fuzz_checksum"
 path = "fuzz_targets/fuzz_checksum.rs"
 test = false
 doc = false
+
+[workspace]
