@@ -1,5 +1,7 @@
 # irig106-studio
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/TelemetryWorks/irig106-studio/badge)](https://scorecard.dev/viewer/?uri=github.com/TelemetryWorks/irig106-studio)
+
 IRIG 106 Chapter 10 file visualization and analysis tool.
 
 `irig106-studio` is a toolset for working with IRIG 106 telemetry and Chapter 10 recordings, covering everything from decoding and analysis to downstream workflows.
