@@ -72,7 +72,19 @@ root Cargo lockfile, not that the alert was dismissed.
   [query-deny bypass](https://github.com/advisories/GHSA-8g5g-mxqh-grgj), so 6.4.5
   is selected. Nanoid 3.3.18 additionally fixes the
   [zero-size generator issue](https://github.com/advisories/GHSA-2v37-7h3g-55p8).
-  The final live npm audit reports zero vulnerabilities.
+  The final live npm audit reports zero vulnerabilities. A further RustSec sweep
+  found two quick-xml DoS advisories (RUSTSEC-2026-0194 and RUSTSEC-2026-0195)
+  outside the captured GitHub list. Plist 1.10.0 is the first compatible plist
+  release depending on quick-xml 0.41; quick-xml is locked at its patched 0.41.0
+  floor. RustSec now reports zero vulnerability advisories, while retaining its
+  explicit glib unsoundness and unmaintained dependency warnings. That result
+  does not resolve or dismiss the glib alert above. The same sweep found
+  patchable unsoundness advisories in anyhow (RUSTSEC-2026-0190), memmap2
+  (RUSTSEC-2026-0186), and Tokio (RUSTSEC-2026-0386). Their first compatible
+  fixed versions are locked at 1.0.103, 0.9.11, and 1.51.6 respectively.
+  The core memmap2 floor and standalone WASM lock also require 0.9.11; the
+  standalone fuzz lock already uses fixed 0.9.12. Glib is the sole remaining
+  unsoundness warning. Existing unmaintained notices are retained, not suppressed.
 - Happy-dom 21.0.4 is the necessary direct major to cover all three captured
   happy-dom advisories. Vitest/mocker stay on major 4 at 4.1.12. PostCSS,
   source-map-js, ws, brace-expansion and humanfs use patched compatible versions.
@@ -107,7 +119,7 @@ root Cargo lockfile, not that the alert was dismissed.
 - `cargo test --workspace --locked` passes the native command tests (5), core
   tests (61), and doctest (1), with two build workers and reduced debug metadata.
   Rust formatting and warning-denying Clippy also pass. All 14 exported WASM
-  pagination tests pass with the unchanged standalone WASM lockfile. Exact-head hosted CI is
+  pagination tests pass; the standalone WASM lock changes only memmap2 to 0.9.11. Exact-head hosted CI is
   recorded in the PR; local native tests are not a desktop GUI smoke test.
 - This is dependency remediation and a [dated owner policy](../security/dependabot-policy.md),
   not an architecture migration or publishing/settings change. Local-only TMATS
