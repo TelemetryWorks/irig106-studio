@@ -24,14 +24,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tauri-apps/api": "^2.0.0",
-    "@tauri-apps/cli": "^2.0.0",
-    "@tauri-apps/plugin-dialog": "^2.6.0",
-    "eslint": "^10.1.0",
+    "@tauri-apps/api": "^2.12.4",
+    "@tauri-apps/cli": "^2.12.4",
+    "@tauri-apps/plugin-dialog": "^2.8.4",
+    "eslint": "^10.14.0",
     "happy-dom": "^20.8.9",
-    "prettier": "^3.8.1",
+    "prettier": "^3.10.1",
     "typescript": "^5.5.0",
-    "typescript-eslint": "^8.57.2",
+    "typescript-eslint": "^8.72.2",
     "vite": "^6.0.0",
     "vitest": "^4.1.2"
   }
