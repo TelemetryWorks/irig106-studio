@@ -30,8 +30,11 @@ The owner approved merging the 29 remediations while leaving Dependabot
 remaining alert, not a claim that all 30 alerts are fixed. A read-only GitHub API
 check on 2026-11-16 confirmed that alert #1 is still open.
 
+[RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) /
 [GHSA-wrw7-89jp-8q8g](https://github.com/advisories/GHSA-wrw7-89jp-8q8g)
 affects glib versions `>=0.15, <0.20`; the patched line starts at `0.20`.
+The affected implementation is `glib::VariantStrIter::impl_get`, reachable
+only through `Variant::array_iter_str()`.
 The unsound iterator functions are `VariantStrIter::{next, nth, last, next_back,
 nth_back}`, reached through `Variant::array_iter_str()`.
 
@@ -47,6 +50,13 @@ reference to `VariantStrIter` was found in Studio's own code. This source
 inspection does not establish that transitive dependency calls are unreachable
 or that the locked glib version is safe.
 
+The reviewer's broader exposure finding at `c9027bc` was a source search of
+all **445 crates**: no caller of `Variant::array_iter_str()` was found outside
+glib's own definition/tests. Studio's Rust code does not use glib. This records
+the reviewer's inspection, not a newly executed dependency-wide search by this
+maintainer. It describes the inspected source at that revision, not a permanent
+guarantee of unreachability or a resolution of the advisory.
+
 Upstream status, coordinator-verified on 2026-11-16:
 
 - GTK `0.19.0`, released 2026-09-08, depends on glib `^0.22`.
@@ -59,9 +69,11 @@ Upstream status, coordinator-verified on 2026-11-16:
   and remains open.
 
 No new upstream report is needed: maintainers already track this upgrade.
-Re-check this exception on **every Tauri, tao, wry, or webkit2gtk upgrade** with
-`cargo tree -i glib`. Inspect the resolved glib versions and reverse dependency
-chain against the advisory and upstream upgrade status. Keep alert #1 open
+Repeat the source exposure search whenever the **GTK stack or dependencies
+change**. Re-check this exception on **every Tauri, tao, wry, or webkit2gtk
+upgrade** with `cargo tree -i glib`. Inspect the resolved glib versions and
+reverse dependency chain against the advisory and upstream upgrade status.
+Keep alert #1 open
 until the actual dependency tree reaches a patched version and the relevant
 checks pass; do not dismiss it to clear the alert count.
 
