@@ -16,15 +16,66 @@ will not change until merge and dependency-graph re-evaluation.
 Tauri 2.12.5 also requires GTK 0.18. There is no published glib 0.18.6. The locked
 glib 0.18.5 source still contains the immutable out-pointer described by
 [GHSA-wrw7-89jp-8q8g](https://github.com/advisories/GHSA-wrw7-89jp-8q8g).
-The advisory's patched line starts at 0.20.0. Upstream's
-[GTK 0.19 integration](https://github.com/tauri-apps/wry/pull/1843) is still open;
-see also the [Tauri discussion](https://github.com/tauri-apps/tauri/issues/12048).
+The advisory's patched line starts at 0.20.0.
 
 Resolving this remaining alert requires an upstream-compatible GTK/glib release
 or a separately reviewed migration/backport decision. The candidate does not
 remove Linux/desktop functionality, forge dependency versions, introduce an
-unreviewed fork, or dismiss the advisory to make the count zero. Owner direction
-is required before treating the original all-30 assignment as complete.
+unreviewed fork, or dismiss the advisory to make the count zero.
+
+## Owner-approved open glib exception — 2026-11-16
+
+The owner approved merging the 29 remediations while leaving Dependabot
+**alert #1 OPEN, without dismissal**. This is an explicit deferral of the
+remaining alert, not a claim that all 30 alerts are fixed. A read-only GitHub API
+check on 2026-11-16 confirmed that alert #1 is still open.
+
+[RUSTSEC-2024-0429](https://rustsec.org/advisories/RUSTSEC-2024-0429.html) /
+[GHSA-wrw7-89jp-8q8g](https://github.com/advisories/GHSA-wrw7-89jp-8q8g)
+affects glib versions `>=0.15, <0.20`; the patched line starts at `0.20`.
+The affected implementation is `glib::VariantStrIter::impl_get`, reachable
+only through `Variant::array_iter_str()`.
+The unsound iterator functions are `VariantStrIter::{next, nth, last, next_back,
+nth_back}`, reached through `Variant::array_iter_str()`.
+
+Studio's own tracked source was searched at
+`c9027bcb35d797ac64873da63cbacbcba25c244f` with:
+
+```bash
+git grep -n -E 'array_iter_str|VariantStrIter' -- src src-tauri/src crates
+```
+
+The command returned no matches (exit 1): no direct call to `array_iter_str` or
+reference to `VariantStrIter` was found in Studio's own code. This source
+inspection does not establish that transitive dependency calls are unreachable
+or that the locked glib version is safe.
+
+The reviewer's broader exposure finding at `c9027bc` was a source search of
+all **445 crates**: no caller of `Variant::array_iter_str()` was found outside
+glib's own definition/tests. Studio's Rust code does not use glib. This records
+the reviewer's inspection, not a newly executed dependency-wide search by this
+maintainer. It describes the inspected source at that revision, not a permanent
+guarantee of unreachability or a resolution of the advisory.
+
+Upstream status, coordinator-verified on 2026-11-16:
+
+- GTK `0.19.0`, released 2026-09-08, depends on glib `^0.22`.
+- Tauri maintainers confirmed they are upgrading in
+  [tauri#16264](https://github.com/tauri-apps/tauri/issues/16264), closed as a
+  duplicate on 2026-10-12 with a maintainer comment.
+- [webkit2gtk-rs#166](https://github.com/tauri-apps/webkit2gtk-rs/pull/166)
+  tracks glib `0.22` / GTK `0.19` and remains open.
+- [tao#1332](https://github.com/tauri-apps/tao/pull/1332) tracks GTK `0.19`
+  and remains open.
+
+No new upstream report is needed: maintainers already track this upgrade.
+Repeat the source exposure search whenever the **GTK stack or dependencies
+change**. Re-check this exception on **every Tauri, tao, wry, or webkit2gtk
+upgrade** with `cargo tree -i glib`. Inspect the resolved glib versions and
+reverse dependency chain against the advisory and upstream upgrade status.
+Keep alert #1 open
+until the actual dependency tree reaches a patched version and the relevant
+checks pass; do not dismiss it to clear the alert count.
 
 ## Each captured alert versus candidate versions
 
