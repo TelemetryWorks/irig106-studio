@@ -11,7 +11,7 @@ and explains how to make changes effectively.
 |--------------|----------|-----------------------------|------------------------------|
 | Node.js      | ≥ 18     | Frontend build (Vite)       | https://nodejs.org           |
 | npm          | ≥ 9      | Package manager             | Comes with Node.js           |
-| Rust         | ≥ 1.77   | Core crate + Tauri backend  | https://rustup.rs            |
+| Rust         | ≥ 1.90   | Core crate + Tauri backend  | https://rustup.rs            |
 | Git          | ≥ 2.30   | Version control             | https://git-scm.com          |
 
 ### For Desktop Builds (Tauri)

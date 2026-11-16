@@ -46,6 +46,8 @@ jobs:
   rust-workspace:
     name: Rust workspace (core + tauri)
     runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
@@ -72,6 +74,21 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-workspace-${{ hashFiles('**/Cargo.toml') }}
 
+      - name: Setup Node.js for Tauri version alignment
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install JavaScript dependencies
+        run: npm ci
+
+      - name: Check Tauri Rust and JavaScript version alignment
+        run: |
+          node --test scripts/check-tauri-versions.test.mjs
+          set -o pipefail
+          npm run tauri -- info | node scripts/check-tauri-versions.mjs
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
@@ -87,6 +104,8 @@ jobs:
   wasm:
     name: WASM build
     runs-on: ubuntu-latest
+    env:
+      CARGO_BUILD_JOBS: 2
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0

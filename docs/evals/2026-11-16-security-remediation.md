@@ -57,6 +57,25 @@ the reviewer's inspection, not a newly executed dependency-wide search by this
 maintainer. It describes the inspected source at that revision, not a permanent
 guarantee of unreachability or a resolution of the advisory.
 
+### Combined Dependabot #19/#20 re-check — 2026-11-16
+
+After combining the updates with Rust Tauri 2.12.5, dialog 2.8.4, fs 2.7.1,
+tao 0.37.2, and wry 0.57.2, the maintainer executed
+`cargo metadata --locked --format-version 1` and searched every package's
+manifest directory for Rust-source references to `array_iter_str|VariantStrIter`
+with `rg -n --glob '*.rs'`. This resolved **450 crates**, including workspace
+packages and dependencies for all platforms. The count describes this resolved
+tree, not the reviewer's earlier 445- or 458-crate trees.
+
+Only glib 0.18.5 matched: its iterator definitions/re-export, documentation, and
+tests. No external crate referenced those names. A separate `git grep` over
+Studio's desktop, core, and WASM Rust sources found no `glib`, `array_iter_str`,
+or `VariantStrIter` reference (exit 1). `cargo tree -i glib --locked` confirmed
+glib 0.18.5 remains below GTK 0.18.2 through the updated Tauri/tao/wry/webkit2gtk
+chain. Alert #1 remains OPEN, without dismissal; this is source-inspection
+evidence, not proof that the advisory is fixed. Repeat these checks whenever
+the GTK stack or dependencies change.
+
 Upstream status, coordinator-verified on 2026-11-16:
 
 - GTK `0.19.0`, released 2026-09-08, depends on glib `^0.22`.
