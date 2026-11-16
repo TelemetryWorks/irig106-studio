@@ -20,7 +20,7 @@ thiserror = "2"
 
 # Native-only: memory-mapped I/O for large files
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-memmap2 = "0.9"
+memmap2 = "0.9.11"
 
 [dev-dependencies]
 # Will add test fixtures and proptest later
