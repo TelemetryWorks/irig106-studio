@@ -1,0 +1,20 @@
+# No advisory ignores: owner approval is required for each proposed exception.
+[advisories]
+unmaintained = "all"
+unsound = "all"
+
+[licenses]
+# Start with the licenses declared by Studio's core and WASM crates.
+# Other license findings remain visible for owner review.
+allow = ["MIT", "Apache-2.0"]
+confidence-threshold = 0.8
+
+[bans]
+multiple-versions = "warn"
+wildcards = "deny"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []
