@@ -76,4 +76,26 @@ actionlint 1.7.12, and zizmor 1.32.0 regular/offline checks ran locally. The two
 linters were downloaded as checksum-verified prebuilt ARM64 binaries. No local
 workspace, Tauri, WASM, MSRV, or development-tool compilation was performed.
 
-Hosted findings and cold/warm timings will be recorded after the PR runs.
+Hosted findings and cold/warm timings are reported in
+[PR #22](https://github.com/TelemetryWorks/irig106-studio/pull/22), including
+exact run IDs and the final reviewed head. The first audit invocation exposed
+an incorrect CLI option placement (`--config` belongs before `check` in
+cargo-deny 0.20.2); the follow-up fixes that invocation without changing policy
+or ignoring any finding. All heavy validation runs in GitHub Actions.
+
+
+## Cold cache evidence
+
+[CI run 44266919514](https://github.com/TelemetryWorks/irig106-studio/actions/runs/44266919514)
+at `374cba364a0c52d4007d2467fb51271a1ce38e0f` confirmed new-key cache misses
+and successful saves for both jobs.
+
+| Job | Elapsed job time | Cargo cache |
+| --- | --- | --- |
+| WASM build | 53 s | miss; exact key saved |
+| Rust workspace (core + tauri) | 317 s | miss; exact key saved |
+
+The follow-up changes only audit argument placement and this evidence; no
+Rust/WASM compiled inputs or existing checks change. The PR records warm-cache
+timings from that final head. Job totals include setup, package/network time,
+and cache transfers, so they are observations, not guaranteed speedups.

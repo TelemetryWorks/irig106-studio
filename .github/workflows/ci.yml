@@ -235,11 +235,11 @@ jobs:
           fallback: none
 
       - name: Audit workspace dependencies
-        run: cargo deny --format json --locked --workspace check --config deny.toml advisories licenses bans sources
+        run: cargo deny --format json --locked --workspace --config deny.toml check advisories licenses bans sources
 
       - name: Audit standalone WASM dependencies
         if: ${{ !cancelled() }}
-        run: cargo deny --format json --locked --manifest-path crates/irig106-studio-wasm/Cargo.toml check --config deny.toml advisories licenses bans sources
+        run: cargo deny --format json --locked --manifest-path crates/irig106-studio-wasm/Cargo.toml --config deny.toml check advisories licenses bans sources
 
       - name: Setup Node.js for production dependency audit
         if: ${{ !cancelled() }}
