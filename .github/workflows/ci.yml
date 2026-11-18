@@ -227,10 +227,10 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Install checksum-verified prebuilt cargo-deny
+      - name: Install checksum-verified prebuilt dependency auditors
         uses: taiki-e/install-action@ab49d3c64680143e184118bed66a46419fc15519 # v2.90.5
         with:
-          tool: cargo-deny@0.20.2
+          tool: cargo-deny@0.20.2,cargo-audit@0.23.0
           checksum: true
           fallback: none
 
@@ -240,6 +240,16 @@ jobs:
       - name: Audit standalone WASM dependencies
         if: ${{ !cancelled() }}
         run: cargo deny --format json --locked --manifest-path crates/irig106-studio-wasm/Cargo.toml --config deny.toml check advisories licenses bans sources
+
+      # cargo-deny prunes inactive optional dependencies. Audit both lockfiles
+      # too, including locked chrono, without activating new runtime features.
+      - name: Audit complete workspace lockfile
+        if: ${{ !cancelled() }}
+        run: cargo audit --json --deny warnings --file Cargo.lock
+
+      - name: Audit complete WASM lockfile
+        if: ${{ !cancelled() }}
+        run: cargo audit --json --deny warnings --file crates/irig106-studio-wasm/Cargo.lock
 
       - name: Setup Node.js for production dependency audit
         if: ${{ !cancelled() }}
