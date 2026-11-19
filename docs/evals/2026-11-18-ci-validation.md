@@ -12,7 +12,7 @@ The three existing required job names and their checks are unchanged:
 - **WASM build**: production wasm-pack build and exported-entry tests.
 
 No settings, rulesets, required-check configuration, secrets, workflow
-permissions, project dependencies, application code, or MSRV declarations are
+permissions, resolved dependency versions, application code, or MSRV declarations are
 changed. New jobs are additional checks, not newly required checks. Native,
 WASM, MSRV, and audit jobs retain two Cargo workers.
 
@@ -59,9 +59,10 @@ nightly fuzz check is omitted to avoid unrelated compute.
 **Dependency and security validation** runs all four cargo-deny categories
 (advisories, licenses, bans, sources) on both the workspace and standalone WASM
 manifest. `unsound = "all"` and `unmaintained = "all"` include transitive
-findings. No advisory ignore, graph exclusion, or skipped category is added.
-The initial license allow-list matches core/WASM's declared MIT/Apache-2.0;
-other license findings are surfaced for owner review, not silently accepted.
+findings. The initial run had no advisory ignores and used only core/WASM's
+MIT/Apache-2.0 license terms. The owner-approved follow-up below applies four
+specific exceptions and the additional approved licenses; graph exclusions and
+skipped categories are not added.
 Duplicate versions warn, wildcard requirements fail, and unknown registry/git
 sources fail. Later audits still execute after earlier findings, without
 converting failure to success or `continue-on-error`.
@@ -71,13 +72,15 @@ The first working cargo-deny run demonstrated that locked optional chrono
 both complete lockfiles with prebuilt cargo-audit 0.23.0 and `--deny warnings`.
 This covers inactive lockfile entries (including chrono RUSTSEC-2026-0543)
 without adding runtime features or dependencies. Audit warnings remain visible
-and fail the new non-required job; no ignore is added in either auditor.
+were initially failing the new non-required job. The four owner-approved
+exceptions are now equivalent in both auditors.
 
 The same job runs `npm audit --omit=dev --audit-level=high` against the lockfile
 without installing/building the frontend again. All current npm dependencies
 are development dependencies, so this audit's production-only scope does not
 replace full development-tree security review. Existing glib alert #1 stays
-OPEN; ignore proposals must be approved separately by the owner.
+OPEN. The owner approved the four auditor exceptions on 2026-11-18; this does
+not authorize dismissing the GitHub alert.
 
 ## Local validation
 
@@ -225,14 +228,15 @@ Chrono 0.4.44 is locked via serde_with but absent from cargo-deny's active
 feature graph. RUSTSEC-2026-0543 is therefore covered by the additional complete
 lockfile audit. Final lockfile findings are reported with exact CI logs in the PR.
 
-## Owner approval proposals — not applied
+## Owner decisions 2026-11-18 — applied to PR #22
 
-No ignore is present in `deny.toml`, and no cargo-audit ignore config is added.
-The following are exact proposed cargo-deny entries for owner consideration,
-not permission to dismiss a GitHub alert or to claim any advisory is fixed:
+The owner approved all four advisory exceptions with the exact proposed reasons
+and upstream links. They are applied in `deny.toml` and equivalently in
+`.cargo/audit.toml`, with those same reasons preserved as comments in the latter.
+They do not dismiss a GitHub alert or claim any advisory is fixed:
 
 ```toml
-# PROPOSAL ONLY: add inside [advisories] only after explicit owner approval.
+# Owner-approved on 2026-11-18; applied inside [advisories] in deny.toml.
 ignore = [
   { id = "RUSTSEC-2024-0429", reason = "Temporary Tauri GTK 0.18 / glib 0.18.5 dependency; alert #1 stays OPEN. Upstream upgrade tracked at https://github.com/tauri-apps/tauri/issues/16264 ; re-check every GTK/Tauri dependency change." },
   { id = "RUSTSEC-2026-0543", reason = "Locked chrono 0.4.44 is transitive via serde_with; no patched version for this unmaintained advisory. Track https://github.com/chronotope/chrono/issues/1768 and re-check every serde_with update." },
@@ -241,31 +245,47 @@ ignore = [
 ]
 ```
 
-Any approved exception must be reconciled with both auditors. cargo-audit uses
-string IDs (rather than cargo-deny's reason objects); an equivalent proposed
-`.cargo/audit.toml` section would be:
+cargo-audit uses string IDs rather than cargo-deny's reason objects. The
+corresponding `.cargo/audit.toml` section is applied with a reason comment for
+each ID:
 
 ```toml
-# PROPOSAL ONLY, not a file added by this PR.
+# Applied on owner approval; see the file for the identical reason comments.
 [advisories]
 ignore = ["RUSTSEC-2024-0429", "RUSTSEC-2026-0543", "RUSTSEC-2026-0441", "RUSTSEC-2024-0370"]
 ```
 
-Keep the reasons and review triggers above as the owner-approved record if
-exceptions are accepted. No new upstream report is needed for glib; its existing
-[exception record](2026-11-16-security-remediation.md) and open alert remain.
+The reasons and review triggers above are the owner-approved record. No new
+upstream report is needed for glib; its existing
+[exception record](2026-11-16-security-remediation.md) and Dependabot alert #1
+remain OPEN, without dismissal.
 
-Other decisions needed before the new job can pass:
+Chrono 0.4.44 is **lockfile-only via serde_with, not compiled** in Studio's active
+graph. The owner records that `irig106-time` already replaced chrono with jiff;
+no work in that repository is part of this PR. The locked chrono entry and its
+exception go away when upstream drops it. Re-check every serde_with update.
 
-- Review the five additional SPDX terms surfaced by the minimal allow-list:
-  `BSD-3-Clause`, `MPL-2.0`, `Zlib`, `Unicode-3.0`, and
-  `Apache-2.0 WITH LLVM-exception`. No license allow-list expansion or license
-  exception has been silently added.
-- Confirm the desktop package's license metadata. Its manifest lacks a license
-  field, while the repository's `LICENSE` contains Apache-2.0. Do not ignore an
-  unlicensed-package finding in place of confirming and declaring the license.
-- Decide whether the two internal core path dependencies should specify their
-  existing package version (`version = "0.1.0"`) or receive an explicitly
-  approved path-only wildcard policy. Neither change is applied here.
-- Retain duplicate-version warnings for upstream review; no skip-tree or
-  duplicate ignore is proposed. These warnings do not independently fail the job.
+The other approved decisions are also applied:
+
+- Allow `BSD-3-Clause`, `Zlib`, `Unicode-3.0`,
+  `Apache-2.0 WITH LLVM-exception`, and `MPL-2.0` alongside MIT/Apache-2.0.
+  The policy comment limits MPL-2.0 to unmodified Tauri/Servo dependencies.
+- Declare `license = "MIT OR Apache-2.0"` in `src-tauri/Cargo.toml`, matching
+  the core and WASM packages. Keep the existing Apache-2.0 `LICENSE` text and
+  add the standard `LICENSE-MIT`; README now describes the dual license.
+  The MIT attribution is `Copyright (c) 2026 TelemetryWorks`, using the existing
+  `authors = ["TelemetryWorks"]` attribution from
+  [spatial-typestate](https://github.com/TelemetryWorks/spatial-typestate/blob/main/Cargo.toml).
+  The existing Apache appendix has only a placeholder, not a named holder.
+- Add `version = "0.1.0"` to the desktop and WASM core path dependencies.
+  Their paths and resolved package versions do not change; no lockfile update
+  or wildcard policy exemption is needed.
+- Keep duplicate-version findings as warnings, without skips or exclusions.
+- Keep the dependency job non-required. No workflow, ruleset, required-check,
+  permission, or MSRV change is made by this owner-decision follow-up.
+
+Local follow-up validation is limited to TOML parsing and assertions that the
+four IDs and reason strings match, both path requirements match core 0.1.0,
+all three Rust packages declare the same dual license, the Apache text is
+unchanged, and `git diff --check`. Heavy validation remains in GitHub Actions;
+the PR records the exact final-head CI run and dependency job result.
