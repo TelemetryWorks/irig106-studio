@@ -1,0 +1,16 @@
+# Advisory exceptions approved by the owner on 2026-11-18.
+# Equivalent to deny.toml; GitHub glib alert #1 remains OPEN.
+# Chrono is lockfile-only via serde_with, not compiled. The owner confirms
+# irig106-time already replaced chrono with jiff. Remove this exception when
+# upstream drops chrono and it disappears from the lockfile.
+[advisories]
+ignore = [
+  # Temporary Tauri GTK 0.18 / glib 0.18.5 dependency; alert #1 stays OPEN. Upstream upgrade tracked at https://github.com/tauri-apps/tauri/issues/16264 ; re-check every GTK/Tauri dependency change.
+  "RUSTSEC-2024-0429",
+  # Locked chrono 0.4.44 is transitive via serde_with; no patched version for this unmaintained advisory. Track https://github.com/chronotope/chrono/issues/1768 and re-check every serde_with update.
+  "RUSTSEC-2026-0543",
+  # Transitive pin-utils 0.1.0 via hyper; upstream repository archived, no safe upgrade. Track https://github.com/rust-lang/team/pull/2787 ; remove or replace through upstream dependency updates.
+  "RUSTSEC-2026-0441",
+  # Transitive proc-macro-error 1.0.4 via glib-macros/gtk3-macros; no maintained safe release. Track https://gitlab.com/CreepySkeleton/proc-macro-error/-/issues/20 and re-check GTK macro upgrades.
+  "RUSTSEC-2024-0370",
+]

@@ -10,7 +10,7 @@ license = "MIT OR Apache-2.0"
 crate-type = ["cdylib"]
 
 [dependencies]
-irig106-studio-core = { path = "../irig106-studio-core", features = ["wasm"] }
+irig106-studio-core = { version = "0.1.0", path = "../irig106-studio-core", features = ["wasm"] }
 wasm-bindgen = "0.2"
 serde = { version = "1", features = ["derive"] }
 serde-wasm-bindgen = "0.6"

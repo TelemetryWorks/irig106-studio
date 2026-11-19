@@ -203,3 +203,8 @@ Once these crates are ready, the integration path is:
 1. Uncomment Cargo.toml dependencies
 2. Replace stub returns in `lib.rs`
 3. Frontend is untouched
+
+## License
+
+Licensed under either the [MIT license](LICENSE-MIT) or the
+[Apache License, Version 2.0](LICENSE), at your option.
