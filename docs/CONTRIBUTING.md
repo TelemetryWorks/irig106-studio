@@ -94,7 +94,7 @@ cargo test
 Use this checklist before pushing substantial changes or handing work
 off to another developer.
 
-For Cloudroom maintainers, GitHub Actions performs heavy validation. Do not
+For sandboxed maintainers, GitHub Actions performs heavy validation. Do not
 compile the full workspace, desktop app, WASM, MSRV toolchain, or development
 tools in the sandbox when CI covers them. Run only relevant lightweight checks
 locally, then push and cite the exact-head CI runs. Reuse unchanged checks;

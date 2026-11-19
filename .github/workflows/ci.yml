@@ -251,7 +251,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: cargo audit --json --deny warnings --file crates/irig106-studio-wasm/Cargo.lock
 
-      - name: Setup Node.js for production dependency audit
+      - name: Setup Node.js for dependency audits
         if: ${{ !cancelled() }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
@@ -260,3 +260,7 @@ jobs:
       - name: Audit production npm dependencies
         if: ${{ !cancelled() }}
         run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit all npm dependencies including development
+        if: ${{ !cancelled() }}
+        run: npm audit --include=dev --audit-level=high
