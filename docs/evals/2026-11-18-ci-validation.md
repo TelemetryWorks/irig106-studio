@@ -72,13 +72,15 @@ The first working cargo-deny run demonstrated that locked optional chrono
 both complete lockfiles with prebuilt cargo-audit 0.23.0 and `--deny warnings`.
 This covers inactive lockfile entries (including chrono RUSTSEC-2026-0543)
 without adding runtime features or dependencies. Audit warnings remain visible
-were initially failing the new non-required job. The four owner-approved
+and initially failed the new non-required job. The four owner-approved
 exceptions are now equivalent in both auditors.
 
-The same job runs `npm audit --omit=dev --audit-level=high` against the lockfile
-without installing/building the frontend again. All current npm dependencies
-are development dependencies, so this audit's production-only scope does not
-replace full development-tree security review. Existing glib alert #1 stays
+The same job runs both `npm audit --omit=dev --audit-level=high` and
+`npm audit --include=dev --audit-level=high` against the lockfile without
+installing/building the frontend again. The full-tree audit explicitly includes
+the development dependencies affected by #17's vulnerabilities; the production
+audit remains a separate scope. Both audits run even after earlier findings.
+Existing glib alert #1 stays
 OPEN. The owner approved the four auditor exceptions on 2026-11-18; this does
 not authorize dismissing the GitHub alert.
 
